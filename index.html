@@ -39,12 +39,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   
-  <link rel="stylesheet" href="style.css">
-
-  
-
-  
-
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body class="mode-landing">
 
@@ -92,8 +88,22 @@
           <span data-i18n="ctaNow">Rancang Bareng Sekarang</span>
           <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </button>
+
+        <!-- Mobile Hamburger Button -->
+        <button class="landing-mobile-menu-btn" id="landingMobileMenuBtn" aria-label="Buka Menu Navigasi">
+          <i class="fas fa-bars"></i>
+        </button>
       </div>
     </header>
+
+    <!-- MOBILE NAVIGATION DRAWER -->
+    <div class="landing-mobile-nav-drawer" id="landingMobileNavDrawer">
+      <a href="#fitur" class="mobile-nav-link"><i class="fas fa-cubes"></i> <span data-i18n="navFeatures">Fitur Utama</span></a>
+      <a href="#kolaborasi" class="mobile-nav-link"><i class="fas fa-users-gear"></i> <span data-i18n="navMultiplayer">Multiplayer Sync</span></a>
+      <a href="#kolaborasi" class="mobile-nav-link"><i class="fas fa-mobile-screen"></i> <span data-i18n="navMultiDevice">Multi-Perangkat</span></a>
+      <a href="https://sociabuzz.com/xumu_id/tribe" target="_blank" rel="noopener noreferrer" class="mobile-nav-link"><i class="fas fa-heart text-red"></i> <span data-i18n="supportCreator">Dukung Kreator</span></a>
+      <a href="workspace.html" class="mobile-nav-cta"><i class="fas fa-arrow-right"></i> <span data-i18n="ctaNow">Rancang Bareng Sekarang</span></a>
+    </div>
 
     <!-- HERO SECTION -->
     <section class="landing-hero">

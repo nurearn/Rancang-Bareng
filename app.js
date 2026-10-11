@@ -2009,15 +2009,77 @@
   if (mPromptBtn) mPromptBtn.addEventListener('click', openPromptModal);
   if (mCenterBtn) mCenterBtn.addEventListener('click', centerView);
 
+  const workspaceMobileDrawer = document.getElementById('workspaceMobileDrawer');
+  const closeMobileDrawerBtn = document.getElementById('closeMobileDrawerBtn');
+
+  function openMobileDrawer() {
+    if (workspaceMobileDrawer) workspaceMobileDrawer.classList.add('active');
+  }
+  function closeMobileDrawer() {
+    if (workspaceMobileDrawer) workspaceMobileDrawer.classList.remove('active');
+  }
+
   if (mobileSidebarToggle) {
-    mobileSidebarToggle.addEventListener('click', () => {
-      sidebarPanel?.classList.toggle('mobile-open');
+    mobileSidebarToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMobileDrawer();
     });
   }
 
   if (mSidebarBtn) {
-    mSidebarBtn.addEventListener('click', () => {
-      sidebarPanel?.classList.toggle('mobile-open');
+    mSidebarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMobileDrawer();
+    });
+  }
+
+  if (closeMobileDrawerBtn) {
+    closeMobileDrawerBtn.addEventListener('click', closeMobileDrawer);
+  }
+
+  if (workspaceMobileDrawer) {
+    workspaceMobileDrawer.addEventListener('click', (e) => {
+      if (e.target === workspaceMobileDrawer) closeMobileDrawer();
+    });
+  }
+
+  const drawerProjectBtn = document.getElementById('drawerProjectBtn');
+  if (drawerProjectBtn) {
+    drawerProjectBtn.addEventListener('click', () => {
+      closeMobileDrawer();
+      openProjectModal();
+    });
+  }
+
+  const drawerPromptBtn = document.getElementById('drawerPromptBtn');
+  if (drawerPromptBtn) {
+    drawerPromptBtn.addEventListener('click', () => {
+      closeMobileDrawer();
+      openPromptModal();
+    });
+  }
+
+  const drawerShareBtn = document.getElementById('drawerShareBtn');
+  if (drawerShareBtn) {
+    drawerShareBtn.addEventListener('click', () => {
+      closeMobileDrawer();
+      openInviteModal();
+    });
+  }
+
+  const drawerExportPngBtn = document.getElementById('drawerExportPngBtn');
+  if (drawerExportPngBtn) {
+    drawerExportPngBtn.addEventListener('click', () => {
+      closeMobileDrawer();
+      document.getElementById('pngBtn')?.click();
+    });
+  }
+
+  const drawerExportMdBtn = document.getElementById('drawerExportMdBtn');
+  if (drawerExportMdBtn) {
+    drawerExportMdBtn.addEventListener('click', () => {
+      closeMobileDrawer();
+      document.getElementById('generateMdBtn')?.click();
     });
   }
 

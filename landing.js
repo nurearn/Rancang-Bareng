@@ -175,4 +175,27 @@
     });
   }
 
+  // Mobile Hamburger Menu Drawer Toggle
+  const mobileMenuBtn = document.getElementById('landingMobileMenuBtn');
+  const mobileNavDrawer = document.getElementById('landingMobileNavDrawer');
+  if (mobileMenuBtn && mobileNavDrawer) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileNavDrawer.classList.toggle('active');
+    });
+
+    // Close when clicking outside or clicking any nav link
+    document.addEventListener('click', (e) => {
+      if (!mobileNavDrawer.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+        mobileNavDrawer.classList.remove('active');
+      }
+    });
+
+    mobileNavDrawer.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileNavDrawer.classList.remove('active');
+      });
+    });
+  }
+
 })();

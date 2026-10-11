@@ -30,7 +30,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="workspace.css">
 
   <!-- Realtime Internet Collab Library (MQTT over WebSocket) -->
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.5/dist/mqtt.min.js"></script>
@@ -746,6 +747,50 @@
     </div>
   </div>
 
+  <!-- ============================================================ -->
+  <!-- WORKSPACE MOBILE QUICK DRAWER MENU                         -->
+  <!-- ============================================================ -->
+  <div class="workspace-mobile-drawer" id="workspaceMobileDrawer" role="dialog" aria-modal="true" aria-label="Menu Navigasi Studio">
+    <div class="drawer-panel">
+      <div class="drawer-header">
+        <div class="drawer-title-group">
+          <h3>Menu Studio</h3>
+          <span class="modal-subtitle">Rancang Bareng Mobile</span>
+        </div>
+        <button class="modal-close-btn" id="closeMobileDrawerBtn" aria-label="Tutup Menu"><i class="fas fa-xmark"></i></button>
+      </div>
+      <button class="drawer-item" id="drawerProjectBtn">
+        <i class="fas fa-folder-tree text-blue"></i>
+        <span>Kelola & Ganti Proyek</span>
+      </button>
+      <button class="drawer-item" id="drawerPromptBtn">
+        <i class="fas fa-wand-magic-sparkles text-purple"></i>
+        <span>Generator Prompt AI</span>
+      </button>
+      <button class="drawer-item" id="drawerShareBtn">
+        <i class="fas fa-share-nodes text-yellow"></i>
+        <span>Bagikan Ruang Kolaborasi</span>
+      </button>
+      <button class="drawer-item" id="drawerExportPngBtn">
+        <i class="fas fa-image text-green"></i>
+        <span>Ekspor Gambar PNG</span>
+      </button>
+      <button class="drawer-item" id="drawerExportMdBtn">
+        <i class="fas fa-file-lines text-purple"></i>
+        <span>Ekspor Dokumen RPD (.md)</span>
+      </button>
+      <div class="dd-divider"></div>
+      <a href="https://sociabuzz.com/xumu_id/tribe" target="_blank" rel="noopener noreferrer" class="drawer-item">
+        <i class="fas fa-heart text-red"></i>
+        <span>Dukung Kreator (Donasi)</span>
+      </a>
+      <a href="index.html" class="drawer-item">
+        <i class="fas fa-arrow-left"></i>
+        <span>Kembali ke Beranda</span>
+      </a>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div class="nb-toast" id="toast">
     <div class="toast-icon-wrap"><i class="fas fa-check"></i></div>
@@ -753,9 +798,6 @@
   </div>
 
   <!-- MAIN SCRIPT -->
-  <script src="app.js"></script>
-
-  <!-- MAIN DASHBOARD SCRIPT -->
   <script src="app.js"></script>
 </body>
 </html>
