@@ -1622,15 +1622,44 @@ body.mode-landing .lang-btn {
 .pipe-path-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 700;
+  font-size: 0.76rem;
 }
-.pipe-path-label i {
+.pipe-num {
   color: var(--nb-black);
+  font-family: var(--nb-font-mono);
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+.pipe-name-node {
+  color: var(--nb-black);
+  max-width: 95px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pipe-link-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border: 1px solid #000000;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pipe-link-badge i {
+  color: #1d4ed8;
+  font-size: 0.65rem;
 }
 
 .pipe-del-btn {

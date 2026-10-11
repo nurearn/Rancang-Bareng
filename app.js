@@ -2656,12 +2656,6 @@
     document.querySelectorAll('.pipe-path').forEach(p => {
       const isSel = p.dataset.connId === id;
       p.classList.toggle('selected', isSel);
-      if (isSel) {
-        p.setAttribute('marker-end', 'url(#pipe-arrow-active)');
-      } else {
-        const isSub = p.classList.contains('sub-pipe');
-        p.setAttribute('marker-end', isSub ? 'url(#pipe-arrow-sub)' : 'url(#pipe-arrow)');
-      }
     });
   }
 
@@ -2695,8 +2689,6 @@
     const isSub = conn.connType === 'sub';
     path.setAttribute('class', 'pipe-path' + (isSub ? ' sub-pipe' : '') + (selectedConnId === conn.id ? ' selected' : ''));
     path.dataset.connId = conn.id;
-
-    path.setAttribute('marker-end', selectedConnId === conn.id ? 'url(#pipe-arrow-active)' : (isSub ? 'url(#pipe-arrow-sub)' : 'url(#pipe-arrow)'));
 
     path.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -3002,22 +2994,23 @@
           <i class="fas fa-link-slash"></i>
           <span>Belum ada pipa yang tersambung. Tarik titik hitam di kanan kotak ke kiri kotak lain.</span>
         </div>`;
-    } else {
       let pipeHtml = '';
+      const isEn = currentLang === 'en';
       connections.forEach((c, i) => {
         const fromName = getRefName(c.from);
         const toName = getRefName(c.to);
         const isSub = c.connType === 'sub';
+        const connText = isEn ? 'connected with' : 'terhubung dengan';
         pipeHtml += `
           <div class="pipe-row-card">
-            <div class="pipe-path-label" title="${escapeHtml(fromName)} ➔ ${escapeHtml(toName)}">
-              <span>${i + 1}.</span>
-              <span>${escapeHtml(fromName)}</span>
-              <i class="fas fa-arrow-right"></i>
-              <span>${escapeHtml(toName)}</span>
+            <div class="pipe-path-label" title="${escapeHtml(fromName)} ${connText} ${escapeHtml(toName)}">
+              <span class="pipe-num">${i + 1}.</span>
+              <span class="pipe-name-node">${escapeHtml(fromName)}</span>
+              <span class="pipe-link-badge"><i class="fas fa-link"></i> ${connText}</span>
+              <span class="pipe-name-node">${escapeHtml(toName)}</span>
               ${isSub ? '<span style="font-size:0.6rem; background:#e9d5ff; border:1px solid #000; padding:1px 4px; border-radius:3px;">Sub</span>' : ''}
             </div>
-            <button class="pipe-del-btn" data-pipe-del="${c.id}" title="Hapus sambungan pipa">
+            <button class="pipe-del-btn" data-pipe-del="${c.id}" title="${isEn ? 'Delete pipe connection' : 'Hapus sambungan pipa'}">
               <i class="fas fa-trash-can"></i>
             </button>
           </div>`;
@@ -3697,35 +3690,38 @@
       }
     });
 
-    md += `## 3. ${isEn ? 'Data Pipeline Specifications & Flow Matrix (Real-Time Synced)' : 'Spesifikasi Alur Pipa & Integrasi Data (Real-Time Synced)'}\n\n`;
+    md += `## 3. ${isEn ? 'Data Pipeline Specifications & Component Interconnections' : 'Spesifikasi Sambungan Pipa & Integrasi Antar-Komponen'}\n\n`;
     if (connections.length === 0) {
       md += `_${isEn ? 'No connected pipes on canvas yet.' : 'Belum ada sambungan pipa antar kotak yang terpasang di kanvas.'}_\n\n`;
     } else {
-      md += `### 3.1 ${isEn ? 'Pipeline Flow Diagram (Mermaid)' : 'Diagram Alur Pipa (Mermaid)'}\n\n`;
+      md += `### 3.1 ${isEn ? 'Interconnection Graph (Mermaid)' : 'Diagram Hubungan Antar-Komponen (Mermaid)'}\n\n`;
       md += `\`\`\`mermaid\ngraph LR\n`;
+      const connLabel = isEn ? 'connected with' : 'terhubung dengan';
       connections.forEach(c => {
         const fromName = getRefName(c.from).replace(/[^\w\s-]/g, '');
         const toName = getRefName(c.to).replace(/[^\w\s-]/g, '');
-        const arrow = c.connType === 'sub' ? '-.->' : '==>';
-        md += `  "${fromName}" ${arrow} "${toName}"\n`;
+        md += `  "${fromName}" ---|"${connLabel}"| "${toName}"\n`;
       });
       md += `\`\`\`\n\n`;
 
-      md += `### 3.2 ${isEn ? 'Data Transmission Matrix' : 'Matriks Detail Transmisi Pipa Data'}\n\n`;
-      md += `| No | ${isEn ? 'Source (Output)' : 'Sumber (Output)'} | ${isEn ? 'Target (Input)' : 'Tujuan (Input)'} | ${isEn ? 'Pipeline Type' : 'Tipe Jalur'} | ${isEn ? 'Data Contract & Description' : 'Deskripsi & Kontrak Data'} |\n`;
-      md += `|:--:|:----------------|:---------------|:-----------|:-------------------------|\n`;
+      md += `### 3.2 ${isEn ? 'Component Connection & Data Integration Matrix' : 'Matriks Sambungan Pipa & Integrasi Data Antar-Komponen'}\n\n`;
+      md += `| No | ${isEn ? 'Component 1' : 'Komponen 1'} | ${isEn ? 'Relationship' : 'Hubungan'} | ${isEn ? 'Component 2' : 'Komponen 2'} | ${isEn ? 'Pipe Type' : 'Tipe Pipa'} | ${isEn ? 'Integration Contract & Flow' : 'Deskripsi Integrasi & Kontrak Data'} |\n`;
+      md += `|:--:|:----------------|:------------:|:----------------|:-----------|:------------------------------------|\n`;
       connections.forEach((c, idx) => {
         const fromName = getRefName(c.from);
         const toName = getRefName(c.to);
         const tipe = c.connType === 'sub' ? (isEn ? 'Sub-to-Sub' : 'Sub-ke-Sub') : (isEn ? 'Main-Box' : 'Kotak Utama');
-        const desc = isEn ? `Active data transmission from ${fromName} to ${toName}` : `Alur transmisi data aktif dari ${fromName} menuju ${toName}`;
-        md += `| ${idx + 1} | **${fromName}** | **${toName}** | ${tipe} | ${desc} |\n`;
+        const rel = isEn ? '🔗 connected with' : '🔗 terhubung dengan';
+        const desc = isEn
+          ? `**${fromName}** is directly connected with **${toName}**. Establish typed interface, shared state, or API/event bridge between them.`
+          : `**${fromName}** terhubung langsung dengan **${toName}**. Buat kontrak API, event bus, atau interface data terstandar antara kedua komponen ini.`;
+        md += `| ${idx + 1} | **${fromName}** | ${rel} | **${toName}** | ${tipe} | ${desc} |\n`;
       });
       md += `\n`;
     }
 
     if (notes.length > 0) {
-      md += `## 4. ${isEn ? 'Architecture Notes & Decision Points' : 'Catatan Kunci & Pertanyaan Arsitektur (Dilema Pengguna)'}\n\n`;
+      md += `## 4. ${isEn ? 'Architecture Notes & Strategic Decisions' : 'Catatan Kunci & Keputusan Arsitektur (Dilema Pengguna)'}\n\n`;
       notes.forEach((n, idx) => {
         md += `### 4.${idx + 1} 📌 ${n.title || `${isEn ? 'Note' : 'Catatan'} ${idx + 1}`}\n\n`;
         if (n.content && n.content.trim()) {
@@ -3736,7 +3732,18 @@
       });
     }
 
-    md += `## 5. ${isEn ? 'Implementation & Delivery Checklist' : 'Checklist Eksekusi & Implementasi'}\n\n`;
+    md += `## 5. ${isEn ? 'Autonomous Vibe Coding Blueprint (Ready to Send to AI Agent)' : 'Panduan Eksekusi Vibe Coding (Langsung Kirim ke AI Agent)'}\n\n`;
+    md += `> ${isEn
+      ? 'Feed this markdown document directly into your AI Coding Agent (Antigravity IDE, Cursor, Claude Code, Windsurf, Devin) to immediately build the complete application.'
+      : 'Kirimkan dokumen Markdown ini langsung ke AI Coding Agent kamu (Antigravity IDE, Cursor, Claude Code, Windsurf, Devin) agar agen AI langsung memahami arsitektur dan meng-generate seluruh kode aplikasi secara utuh.'}\n\n`;
+    md += `### 5.1 ${isEn ? 'AI Coding Agent Direct Command' : 'Perintah Langsung untuk AI Coding Agent'}\n\n`;
+    md += `\`\`\`text\n`;
+    md += `${isEn
+      ? `You are an Autonomous Principal Software Engineer. Build the complete, production-ready codebase for "${title}" based on the component boxes, sub-boxes, sticky note architecture decisions, and connected pipes in this document. Implement 100% complete runnable code without any placeholders or TODOs.`
+      : `Kamu adalah Autonomous Principal Software Engineer. Bangun seluruh codebase aplikasi untuk "${title}" sesuai spesifikasi komponen, fitur, keputusan catatan arsitektur, dan sambungan pipa yang tertera di dokumen ini. Tulis kode 100% lengkap siap jalan tanpa placeholder atau TODO.`}\n`;
+    md += `\`\`\`\n\n`;
+
+    md += `## 6. ${isEn ? 'Implementation & Delivery Checklist' : 'Checklist Eksekusi & Implementasi'}\n\n`;
     let anyFeat = false;
     mainBoxes.forEach(box => {
       box.subs.forEach(sub => {
@@ -3757,7 +3764,7 @@
     }
 
     md += `---\n`;
-    md += `_${isEn ? 'This Architecture Document was automatically synced by Rancang Bareng Studio' : 'Dokumen RPD ini otomatis disinkronkan oleh RPD & Arsitektur Studio (Neo-Brutalism Edition)'}_\n`;
+    md += `_${isEn ? 'This Architecture Document was automatically generated by Rancang Bareng Studio' : 'Dokumen RPD ini otomatis disinkronkan oleh Rancang Bareng Studio (Neo-Brutalism Edition)'}_\n`;
     return md;
   }
 
@@ -3828,23 +3835,28 @@
       boxesSummary.push(`${isEn ? 'COMPONENT BOX' : 'KOTAK'} ${i + 1}: "${boxName}"\n  ${subsInfo || (isEn ? '(No sub-boxes registered)' : '(Tidak ada sub-kotak terdaftar)')}`);
     });
 
-    // Rangkuman pipa yang tersambung
+    // Rangkuman pipa yang tersambung (Hubungan dua arah antar-komponen)
     const pipesSummary = [];
     connections.forEach((c, i) => {
       const from = getRefName(c.from);
       const to = getRefName(c.to);
-      const isSub = c.connType === 'sub' ? (isEn ? 'Sub-to-Sub Connection' : 'Koneksi Sub-ke-Sub') : (isEn ? 'Main Connection' : 'Koneksi Utama');
-      pipesSummary.push(`${i + 1}. [DATA PIPE] "${from}" ➔ "${to}" (${isSub})`);
+      const isSub = c.connType === 'sub';
+      const pipeType = isSub
+        ? (isEn ? 'Sub-Component Connection' : 'Koneksi Sub-Komponen')
+        : (isEn ? 'Main Component Connection' : 'Koneksi Kotak Utama');
+      pipesSummary.push(isEn
+        ? `${i + 1}. [CONNECTED PIPE] "${from}" is connected with "${to}" (${pipeType})\n   * Integration Meaning: "${from}" and "${to}" must be directly integrated and exchange data/events. Design the exact data contract, API endpoints, or shared state between them.`
+        : `${i + 1}. [KONEKSI PIPA] "${from}" terhubung dengan "${to}" (${pipeType})\n   * Maksud Integrasi: "${from}" dan "${to}" terhubung langsung dan bertukar data/event. Rancang kontrak data, API endpoints, atau state bridge nyata antara kedua komponen ini.`);
     });
 
-    // Rangkuman Kotak Catatan / Pertanyaan Pengguna
+    // Rangkuman Kotak Catatan / Keputusan Pengguna (Wajib dijawab & diterapkan AI)
     const notesSummary = [];
     notes.forEach((n, i) => {
-      const noteTitle = n.title.trim() || `${isEn ? 'Architecture Note' : 'Pertanyaan Arsitektur'} ${i + 1}`;
+      const noteTitle = n.title.trim() || `${isEn ? 'Architecture Decision' : 'Keputusan Arsitektur'} ${i + 1}`;
       const noteBody = n.content.trim() || (isEn ? '(No detailed text)' : '(Tidak ada rincian teks)');
       const actionText = isEn
-        ? '*Mandatory AI Task:* Thoroughly address this question/dilemma, provide the best architectural and technical recommendation, and detail trade-offs and rationale!'
-        : '*Tugas Khusus AI:* Jawab pertanyaan/dilema ini secara tuntas, berikan rekomendasi pilihan arsitektur/teknologi terbaik, serta jelaskan alasannya dan perbandingannya!';
+        ? '*Mandatory AI Implementation Directive:* Resolve this dilemma/question decisively, select the optimal technical pattern, and implement the chosen solution directly in the code!'
+        : '*Instruksi Wajib AI:* Ambil keputusan tegas untuk menyelesaikan pertanyaan/dilema ini, pilih solusi teknologi terbaik, dan langsung terapkan solusinya ke dalam kode proyek!';
       notesSummary.push(`${i + 1}. 📌 **[${noteTitle}]**:\n   > "${noteBody}"\n   ${actionText}`);
     });
 
@@ -3860,7 +3872,61 @@
       languageInstruction = 'Gunakan Bahasa Indonesia profesional standar teknis industri software (istilah teknis kunci tetap gunakan bahasa Inggris baku seperti payload, idempotency, throughput, latency, webhook, RPC).';
     }
 
-    if (mode === 'architect') {
+    if (mode === 'vibe_coding') {
+      if (isEn) {
+        personaHeader = `You are an Autonomous Principal AI Software Engineer & Full-Stack Architect executing in a modern AI coding agent environment (Antigravity IDE, Cursor, Claude Code, Windsurf, Devin).
+Your mission is to autonomously build the complete, production-ready, fully working codebase for "${title}" based on the canvas architecture specification below.`;
+        deliverables = `
+VIBE CODING AUTONOMOUS IMPLEMENTATION DIRECTIVES:
+1. END-TO-END SYSTEM ARCHITECTURE COMPREHENSION:
+   - Thoroughly review all Component Boxes, their Sub-Boxes, features, and interconnection pipes.
+   - Every connection indicates a direct functional integration or data pipeline between the two components:
+     * For example, if "Kotak B" is connected with "Kotak A", integrate them with real API endpoints, typed interfaces, or shared state.
+     * If "Sub A" (inside Kotak A) is connected with "Kotak C", wire their specific event/handler contracts.
+
+2. MANDATORY ARCHITECTURAL DECISIONS & USER NOTES RESOLUTION:
+   - Any question, dilemma, or sticky note attached by the user is a MANDATORY requirement. Resolve each note decisively, choose the optimal technical pattern, and implement it directly in the codebase with clear architectural rationale.
+
+3. TECH STACK & MODULAR DIRECTORY LAYOUT:
+   - Recommend and configure the ideal modern tech stack (e.g. Next.js / Vite React, Tailwind CSS, TypeScript, Node.js / FastAPI, SQLite / PostgreSQL / Redis).
+   - Lay out the clean, scalable project folder/file tree.
+   - Provide exact configuration files (package.json, tsconfig, env variables, etc.).
+
+4. COMPLETE PRODUCTION-READY CODE (ZERO PLACEHOLDERS):
+   - Write 100% complete, fully implemented code files for each module.
+   - STRICT BAN: NO placeholders, NO "// TODO: implement later", NO ellipsis "...". Every function and component must be fully fleshed out.
+   - Include TypeScript interfaces, state management, API routes, data validation, and responsive UI components.
+
+5. VERIFICATION & RUN COMMANDS:
+   - Provide exact step-by-step terminal commands to install dependencies, run locally, test, and verify the entire system.`;
+      } else {
+        personaHeader = `Kamu adalah Autonomous Principal AI Software Engineer & Senior Full-Stack Architect kelas dunia yang bekerja di lingkungan AI coding mutakhir (Antigravity IDE, Cursor, Claude Code, Windsurf, Devin).
+Tugasmu adalah merealisasikan dan membangun SELURUH codebase aplikasi "${title}" secara lengkap, siap jalan (production-ready), dan berfungsi 100% berdasarkan blueprint arsitektur kanvas di bawah ini.`;
+        deliverables = `
+PANDUAN EKSEKUSI VIBE CODING SIAP JALAN:
+1. PEMAHAMAN TOTAL ARSITEKTUR & SAMBUNGAN PIPA:
+   - Analisis setiap Kotak Komponen, Sub-Kotak, dan rincian fitur terdaftar.
+   - Analisis setiap sambungan pipa: Pipa menandakan kedua komponen saling terhubung dan bertukar data secara langsung.
+     * Contoh: Jika "Kotak B" terhubung dengan "Kotak A", buat integrasi nyata antara keduanya (REST endpoint / tRPC / WebSocket / shared service).
+     * Jika "Sub A" (di Kotak A) terhubung dengan "Kotak C", sambungkan handler/event dari Sub A langsung ke Kotak C.
+
+2. PENYELESAIAN KUNCI UNTUK CATATAN / PERTANYAAN PENGGUNA:
+   - Pengguna menempelkan catatan pertanyaan/dilema arsitektur di kanvas. Kamu WAJIB mengambil keputusan teknologi terbaik, memberikan rekomendasi mantap, dan LANGSUNG menerapkan solusinya ke dalam kode proyek.
+
+3. STRUKTUR PROYEK & REKOMENDASI TECH STACK:
+   - Berikan rekomendasi stack modern terbaik (misal: Next.js / Vite React, Tailwind CSS, TypeScript, Node.js / Python FastAPI, SQLite / PostgreSQL / Redis).
+   - Jabarkan struktur folder & file proyek secara rapi dan modular.
+   - Sediakan konfigurasi dependencies (package.json / requirements.txt).
+
+4. KODE LENGKAP SIAP JALAN (ZERO PLACEHOLDER):
+   - Tulis kode produksi yang lengkap dan utuh untuk setiap modul yang dirancang.
+   - DILARANG KERAS menggunakan placeholder seperti "// TODO: buat nanti", "// logic goes here", atau potongan kode yang menggantung.
+   - Lengkapi dengan TypeScript types/interface, penanganan error, validasi data, dan integrasi antar-pipa.
+
+5. INSTRUKSI CARA MENJALANKAN (VERIFIKASI):
+   - Berikan perintah terminal langkah demi langkah untuk instalasi dependencies, menjalankan server dev lokal, dan menguji fitur secara end-to-end.`;
+      }
+    } else if (mode === 'architect') {
       if (isEn) {
         personaHeader = `You are a world-class Principal Enterprise Software Architect and Senior Systems Engineer specializing in distributed systems, scalability, and technical architecture specifications.`;
         deliverables = `
@@ -3990,11 +4056,13 @@ Rancang Cetak Biru Keamanan, Ketahanan, dan Penanganan Error untuk seluruh sambu
 
     let targetModelTuning = '';
     if (isEn) {
-      if (targetModel === 'claude') targetModelTuning = 'Use extended technical reasoning to thoroughly evaluate trade-offs before outputting final deliverables.';
+      if (targetModel === 'vibe_agent') targetModelTuning = 'Format output for autonomous multi-file generation. Begin with the complete project folder tree, followed by full runnable code files with clear file path headings (e.g. `### \\`src/index.ts\\``). Never truncate or skip code.';
+      else if (targetModel === 'claude') targetModelTuning = 'Use extended technical reasoning to thoroughly evaluate trade-offs before outputting final deliverables.';
       else if (targetModel === 'deepseek') targetModelTuning = 'Apply rigorous step-by-step reasoning and evaluate failure points across all data pipelines.';
       else if (targetModel === 'cursor') targetModelTuning = 'Format the output as actionable guidance ready for .cursorrules or ARCHITECTURE.md.';
     } else {
-      if (targetModel === 'claude') targetModelTuning = 'Gunakan penalaran mendalam (extended thinking) untuk mengevaluasi trade-off arsitektural sebelum memberikan dokumen final.';
+      if (targetModel === 'vibe_agent') targetModelTuning = 'Format keluaran agar siap dieksekusi oleh AI coding agent. Awali dengan pohon struktur direktori proyek, lalu tuliskan seluruh file kode lengkap dengan header path file (contoh: `### \\`src/index.ts\\``). Jangan potong kode dengan ellipsis.';
+      else if (targetModel === 'claude') targetModelTuning = 'Gunakan penalaran mendalam (extended thinking) untuk mengevaluasi trade-off arsitektural sebelum memberikan dokumen final.';
       else if (targetModel === 'deepseek') targetModelTuning = 'Gunakan penalaran runut dan evaluasi titik kritis kegagalan pada setiap pipa data.';
       else if (targetModel === 'cursor') targetModelTuning = 'Format dokumen agar siap dijadikan file panduan coding (.cursorrules atau ARCHITECTURE.md).';
     }
