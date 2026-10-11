@@ -37,10 +37,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-  
-  <link rel="stylesheet" href="base.css">
+  <!-- Critical Base Tokens Inlined (Zero Render-Blocking Roundtrip) -->
+  <style>:root{--nb-bg:#f5f4ee;--nb-surface:#ffffff;--nb-black:#000000;--nb-border:2.5px solid #000000;--nb-border-sm:2px solid #000000;--nb-border-lg:3px solid #000000;--nb-shadow-xs:2px 2px 0px #000000;--nb-shadow-sm:3px 3px 0px #000000;--nb-shadow-md:4px 4px 0px #000000;--nb-shadow-lg:6px 6px 0px #000000;--nb-shadow-xl:8px 8px 0px #000000;--nb-yellow:#fef08a;--nb-yellow-hover:#fde047;--nb-purple:#e9d5ff;--nb-purple-hover:#d8b4fe;--nb-blue:#bae6fd;--nb-blue-hover:#7dd3fc;--nb-mint:#bbf7d0;--nb-mint-hover:#86efac;--nb-orange:#fed7aa;--nb-orange-hover:#fdba74;--nb-pink:#fbcfe8;--nb-pink-hover:#f472b6;--nb-red:#fecaca;--nb-red-hover:#f87171;--font-main:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--font-mono:'Space Mono',monospace;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:var(--font-main);background-color:var(--nb-bg);color:var(--nb-black);-webkit-font-smoothing:antialiased;}body.mode-landing{height:auto;min-height:100vh;overflow-y:auto;overflow-x:hidden;user-select:auto;cursor:default;}body.mode-landing,body.mode-landing .landing-container,body.mode-landing .landing-hero,body.mode-landing .landing-section,body.mode-landing .features-grid,body.mode-landing .feature-card,body.mode-landing .section-header,body.mode-landing .hero-preview-wrapper,body.mode-landing .preview-browser-card,body.mode-landing .preview-canvas-content,body.mode-landing .mock-node,body.mode-landing .mock-node-header,body.mode-landing .mock-node-body,body.mode-landing .mock-note,body.mode-landing .mock-sub,body.mode-landing .stat-pill,body.mode-landing .device-mockup-card,body.mode-landing .mockup-device-body,body.mode-landing .device-checklist,body.mode-landing .cta-banner-content,body.mode-landing .landing-footer{cursor:default;}body.mode-landing button,body.mode-landing a,body.mode-landing .nav-link,body.mode-landing .lang-btn,body.mode-landing .nb-btn,body.mode-landing .nb-btn-hero,body.mode-landing .nb-btn-hero-outline,body.mode-landing .nb-btn-google,body.mode-landing .to-top-link,body.mode-landing .dpill{cursor:pointer;}body.mode-landing input,body.mode-landing textarea{cursor:text;}body.mode-dashboard{height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column;user-select:none;}.dashboard-app{height:100vh;width:100vw;display:flex;flex-direction:column;overflow:hidden;position:relative;}.nb-btn-donate{background:#ffe4e6;color:#9f1239;border:var(--nb-border-sm);border-radius:8px;font-weight:800;display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-size:0.85rem;padding:6px 14px;box-shadow:2px 2px 0px #000000;transition:all 0.15s ease;flex-shrink:0;}.nb-btn-donate:hover{background:#fecdd3;transform:translate(-1px,-1px);box-shadow:3px 3px 0px #000000;color:#881337;}.footer-donate-link{color:#e11d48;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:transform 0.15s ease;}.footer-donate-link:hover{text-decoration:underline;transform:scale(1.05);}.text-red{color:#e11d48 !important;}</style>
+
+  <!-- Landing Stylesheet -->
   <link rel="stylesheet" href="landing.css">
+
+  <!-- Asynchronous FontAwesome (Non-Blocking FCP) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 </head>
 <body class="mode-landing">
 
@@ -401,6 +406,6 @@
   </div>
 
   <!-- LIGHTWEIGHT LANDING SCRIPT -->
-  <script src="landing.js"></script>
+  <script src="landing.js" defer></script>
 </body>
 </html>
