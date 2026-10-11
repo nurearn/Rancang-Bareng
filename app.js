@@ -681,6 +681,16 @@
     return res;
   }
 
+  function getRoomShareUrl(roomId) {
+    let path = window.location.pathname;
+    if (path.endsWith('index.html')) {
+      path = path.replace(/index\.html$/, 'workspace.html');
+    } else if (!path.endsWith('workspace.html') && !path.includes('.')) {
+      path = path.replace(/\/?$/, '/workspace.html');
+    }
+    return `${window.location.origin}${path}?room=${encodeURIComponent(roomId || currentRoomId || '')}`;
+  }
+
   // ============================================================
   // MULTI-PROJECT STORAGE & PERSISTENCE (TLDRAW STYLE)
   // ============================================================
@@ -1225,7 +1235,7 @@
     }
     if (switchRoomIdInput) switchRoomIdInput.value = currentRoomId;
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}#dashboard`;
+    const shareUrl = getRoomShareUrl(currentRoomId);
     if (roomShareLinkInput) roomShareLinkInput.value = shareUrl;
 
     // Disconnect client lama jika ganti room
@@ -1505,7 +1515,7 @@
       showToast('Ruang kolaborasi dibuat! Tautan siap dibagikan ke tim.', false);
     }
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}#dashboard`;
+    const shareUrl = getRoomShareUrl(currentRoomId);
     if (roomShareLinkInput) roomShareLinkInput.value = shareUrl;
     if (switchRoomIdInput) switchRoomIdInput.value = currentRoomId;
     if (inviteModal) inviteModal.classList.add('active');
@@ -1513,8 +1523,11 @@
 
   function leaveCollabRoom() {
     currentRoomId = null;
-    const cleanUrl = `${window.location.pathname}#dashboard`;
-    window.history.replaceState({}, '', cleanUrl);
+    let path = window.location.pathname;
+    if (path.endsWith('index.html')) {
+      path = path.replace(/index\.html$/, 'workspace.html');
+    }
+    window.history.replaceState({}, '', path);
     initRealtimeCollab(null);
     if (inviteModal) inviteModal.classList.remove('active');
     showToast('Kembali ke Mode Kanvas Pribadi (Solo).');
@@ -1551,7 +1564,7 @@
     switchRoomBtn.addEventListener('click', () => {
       const newRoom = switchRoomIdInput?.value?.trim();
       if (!newRoom) return;
-      window.location.href = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(newRoom)}#dashboard`;
+      window.location.href = getRoomShareUrl(newRoom);
     });
   }
 
@@ -1562,7 +1575,6 @@
     document.body.className = 'mode-dashboard';
     if (landingPage) landingPage.style.display = 'none';
     if (dashboardApp) dashboardApp.style.display = 'flex';
-    window.location.hash = '#dashboard';
     setTimeout(() => {
       centerView();
       redrawConnections();
@@ -1570,11 +1582,15 @@
   }
 
   function showLanding() {
-    document.body.className = 'mode-landing';
-    if (landingPage) landingPage.style.display = 'flex';
-    if (dashboardApp) dashboardApp.style.display = 'none';
-    if (window.location.hash === '#dashboard') {
-      history.pushState('', document.title, window.location.pathname + window.location.search);
+    if (landingPage) {
+      document.body.className = 'mode-landing';
+      landingPage.style.display = 'flex';
+      if (dashboardApp) dashboardApp.style.display = 'none';
+      if (window.location.hash === '#dashboard') {
+        history.pushState('', document.title, window.location.pathname + window.location.search);
+      }
+    } else {
+      window.location.href = 'index.html';
     }
   }
 
@@ -4426,7 +4442,7 @@ ${closingInstruction}`;
   initUserAuth();
   initRealtimeCollab();
 
-  if (window.location.hash === '#dashboard') {
+  if (!landingPage || window.location.hash === '#dashboard' || new URLSearchParams(window.location.search).has('room')) {
     showDashboard();
   } else {
     showLanding();

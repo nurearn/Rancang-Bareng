@@ -49,11 +49,12 @@ Aplikasi visual digital board berbasis web untuk merancang **Arsitektur Sistem M
 
 ## 🚀 Cara Menjalankan & Vibe Coding
 
-1. Buka file [`index.html`](file:///c:/Users/Rian/Desktop/PROYEK/Roadmap%20RPD/index.html) di browser, atau jalankan web server lokal:
+1. Buka file [`index.html`](file:///c:/Users/Rian/Desktop/PROYEK/Roadmap%20RPD/index.html) (Landing Page) atau langsung [`workspace.html`](file:///c:/Users/Rian/Desktop/PROYEK/Roadmap%20RPD/workspace.html) (Kanvas Studio Kerja) di browser, atau jalankan web server lokal:
    ```bash
    python -m http.server 3030
    ```
-   Akses di: **`http://localhost:3030`**
+   - **Landing Page**: `http://localhost:3030/` (atau `http://localhost:3030/index.html`)
+   - **Kanvas Studio**: `http://localhost:3030/workspace.html` (atau klik tombol *Rancang Bareng Sekarang*)
 
 2. **Alur Kerja Vibe Coding**:
    - Tambahkan kotak komponen dan sub-kotak sesuai ide aplikasi kamu.

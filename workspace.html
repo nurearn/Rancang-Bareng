@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Rancang Bareng · Studio Arsitektur Sistem & PRD</title>
+  
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="Kanvas kerja modular studio arsitektur sistem dan generator PRD real-time.">
+  <meta name="keywords" content="rancang bareng, arsitektur sistem, system design tool, visual architecture, diagram flow, prd generator, kolaborasi real-time">
+  <meta name="author" content="Rancang Bareng">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#fef08a">
+  <link rel="canonical" href="https://rancangbareng.studio/">
+
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Rancang Bareng · Studio Arsitektur Sistem & PRD Kolaboratif">
+  <meta property="og:description" content="Kanvas modular untuk merancang arsitektur sistem dan menghubungkan pipa data bersama tim secara real-time.">
+  <meta property="og:site_name" content="Rancang Bareng">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Favicon SVG (Zero 404, Fast inline) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23fef08a' stroke='%23000' stroke-width='8'/><path d='M25 50h50M50 25v50' stroke='%23000' stroke-width='10' stroke-linecap='round'/></svg>">
+
+  <!-- Fonts & CDN Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Realtime Internet Collab Library (MQTT over WebSocket) -->
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.5/dist/mqtt.min.js"></script>
+
+  <!-- Deferred Canvas Export Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer crossorigin="anonymous"></script>
+
+</head>
+<body class="mode-dashboard">
+
+<!-- ============================================================ -->
+  <!-- 2. STUDIO DASHBOARD APP (CANVAS WORKSPACE)                   -->
+  <!-- ============================================================ -->
+  <div id="dashboardApp" class="dashboard-app" style="display: flex;">
+    
+    <!-- TOP APP BAR -->
+    <!-- TOP APP BAR (GOLDEN RATIO 1:1.618 MINIMALIST LAYOUT) -->
+    <header class="app-header" role="banner">
+      
+      <!-- ZONE 1: BRAND, LANG & PROJECT (LEFT - 38.2% PHI) -->
+      <div class="header-zone-left">
+        <div class="brand">
+          <button class="back-home-btn" id="backToLandingBtn" title="Kembali ke Beranda" aria-label="Kembali ke Beranda">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          </button>
+          <div class="brand-box" aria-hidden="true">
+            <i class="fas fa-shapes"></i>
+          </div>
+          <div class="brand-text hide-compact">
+            <div class="brand-title">RANCANG BARENG</div>
+            <div class="brand-sub" data-i18n="brandSubtitle">STUDIO ARSITEKTUR</div>
+          </div>
+        </div>
+
+        <div class="lang-switcher-pill" id="dashboardLangSwitcher" title="Pilih Bahasa" role="group" aria-label="Pilih Bahasa">
+          <button type="button" class="lang-btn active" data-lang="id" id="dashLangId" aria-label="Bahasa Indonesia">ID</button>
+          <button type="button" class="lang-btn" data-lang="en" id="dashLangEn" aria-label="English">EN</button>
+        </div>
+
+        <!-- Project Pill Wrap -->
+        <div class="project-input-wrap">
+          <span class="project-tag"><i class="fas fa-pen-nib" aria-hidden="true"></i></span>
+          <input type="text" id="projectTitle" placeholder="Nama arsitektur..." maxlength="80" aria-label="Nama Proyek Arsitektur">
+          
+          <button class="nb-btn nb-btn-white btn-xs" id="projectManagerBtn" title="Kelola & Ganti Proyek" aria-label="Kelola Daftar Proyek">
+            <i class="fas fa-folder-tree" aria-hidden="true"></i> <span data-i18n="projectsBtn">Proyek</span>
+          </button>
+
+          <div class="save-status" id="saveStatus" title="Tersimpan otomatis">
+            <span class="status-indicator"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ZONE 2: CREATION ISLAND (CENTER - FLOATING SEGMENTED TOOLBAR) -->
+      <div class="header-zone-center">
+        <div class="canvas-action-island" role="toolbar" aria-label="Alat Kanvas">
+          <button class="island-btn island-yellow" id="addMainBoxBtn" title="Tambah kotak komponen" aria-label="Tambah Kotak Komponen">
+            <i class="fas fa-plus" aria-hidden="true"></i> <span data-i18n="addBox">Kotak</span>
+          </button>
+          <button class="island-btn island-blue" id="addNoteBoxBtn" title="Tambah catatan arsitektur" aria-label="Tambah Catatan Arsitektur">
+            <i class="fas fa-note-sticky" aria-hidden="true"></i> <span data-i18n="addNote">Catatan</span>
+          </button>
+          <div class="island-divider"></div>
+          <button class="island-icon-btn" id="centerBtn" title="Pusatkan kanvas" aria-label="Pusatkan Tampilan Kanvas">
+            <i class="fas fa-crosshairs" aria-hidden="true"></i>
+          </button>
+          <button class="island-icon-btn danger" id="clearBtn" title="Bersihkan kanvas" aria-label="Bersihkan Seluruh Isi Kanvas">
+            <i class="fas fa-trash-can" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ZONE 3: COLLABORATION, EXPORT & PRIMARY CTA (RIGHT - 61.8% PHI) -->
+      <div class="header-zone-right">
+        <!-- Room Pill -->
+        <div class="room-collab-bar">
+          <button class="room-badge-pill" id="roomBadgePill" title="Bagikan ruangan" aria-label="Status Ruangan Kolaborasi">
+            <span class="room-status-dot"></span>
+            <span class="room-name-text" id="roomNameText">#rb-studio</span>
+          </button>
+          <div class="collab-avatars-stack" id="collabAvatarsStack" title="Pengguna aktif" aria-label="Daftar Pengguna Aktif"></div>
+          <button class="nb-btn nb-btn-white btn-xs" id="shareRoomBtn" title="Bagikan link kolaborasi" aria-label="Bagikan Link Kolaborasi">
+            <i class="fas fa-share-nodes" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <!-- User Profile Pill (Direct Username Input & Color Avatar) -->
+        <div class="user-profile-pill" id="userProfilePill" title="Klik avatar untuk ganti warna kursor kamu">
+          <button type="button" class="user-avatar-badge" id="userAvatarBtn" title="Ganti warna kursor kamu" aria-label="Ganti warna kursor">
+            <span id="userAvatarInitial">A</span>
+          </button>
+          <input type="text" id="userNameInput" class="user-name-inline-input" placeholder="Nama kamu..." maxlength="20" title="Ketik nama kamu untuk kolaborasi" aria-label="Nama pengguna untuk kolaborasi">
+        </div>
+
+        <!-- Sleek Export Dropdown Menu -->
+        <div class="export-dropdown-wrap" id="exportDropdownWrap">
+          <button class="nb-btn nb-btn-white" id="exportMenuTriggerBtn" aria-expanded="false" aria-haspopup="true" aria-label="Menu Ekspor & Berkas">
+            <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
+            <span data-i18n="exportBtn">Ekspor</span>
+            <i class="fas fa-chevron-down dd-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="export-menu-dropdown" id="exportMenuDropdown" role="menu">
+            <button class="export-dd-item" id="pngBtn" role="menuitem">
+              <i class="fas fa-image text-blue" aria-hidden="true"></i>
+              <div class="dd-text-wrap">
+                <span class="dd-title">Gambar PNG (HD Canvas)</span>
+                <span class="dd-sub">Pipa terhubung tajam 100% tanpa putus</span>
+              </div>
+            </button>
+            <button class="export-dd-item" id="generateMdBtn" role="menuitem">
+              <i class="fas fa-file-lines text-purple" aria-hidden="true"></i>
+              <div class="dd-text-wrap">
+                <span class="dd-title">Dokumen RPD (.md)</span>
+                <span class="dd-sub">Markdown lengkap & diagram Mermaid</span>
+              </div>
+            </button>
+            <div class="dd-divider"></div>
+            <button class="export-dd-item" id="headerExportRbBtn" role="menuitem">
+              <i class="fas fa-file-arrow-down text-yellow" aria-hidden="true"></i>
+              <div class="dd-text-wrap">
+                <span class="dd-title">Ekspor File Proyek (.rb)</span>
+                <span class="dd-sub">Format Rancang Bareng untuk backup</span>
+              </div>
+            </button>
+            <button class="export-dd-item" id="headerImportRbBtn" role="menuitem">
+              <i class="fas fa-file-arrow-up text-green" aria-hidden="true"></i>
+              <div class="dd-text-wrap">
+                <span class="dd-title">Impor File Proyek (.rb)</span>
+                <span class="dd-sub">Buka file dari perangkat</span>
+              </div>
+            </button>
+            <div class="dd-divider"></div>
+            <a href="https://sociabuzz.com/xumu_id/tribe" target="_blank" rel="noopener noreferrer" class="export-dd-item donate-dd" role="menuitem" id="dashDonateBtn">
+              <i class="fas fa-heart text-red" aria-hidden="true"></i>
+              <div class="dd-text-wrap">
+                <span class="dd-title" data-i18n="supportCreator">Dukung Kreator</span>
+                <span class="dd-sub">Sociabuzz Tribe donasi</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- PRIMARY HERO CTA: PROMPT AI -->
+        <button class="nb-btn nb-btn-purple primary-prompt-cta" id="generatePromptBtn" title="Generate AI Prompt RPD & Arsitektur Lengkap" aria-label="Generate AI Prompt">
+          <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+          <span data-i18n="promptBtn">Prompt AI</span>
+        </button>
+
+        <!-- Mobile Drawer Toggle -->
+        <button class="nb-btn nb-btn-white mobile-drawer-toggle" id="mobileSidebarToggle" title="Buka Panel RPD" aria-label="Buka Menu Panel">
+          <i class="fas fa-bars-staggered" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+
+    <!-- MAIN CANVAS WORKSPACE -->
+    <main class="app-workspace">
+
+      <!-- CANVAS VIEWPORT -->
+      <div class="canvas-viewport" id="viewport">
+        <div id="board">
+          <!-- Neo-brutalist dot grid -->
+          <div class="nb-grid-canvas"></div>
+
+          <!-- Remote Multiplayer Cursors Layer -->
+          <div class="remote-cursors-layer" id="remoteCursorsLayer"></div>
+
+          <!-- SVG Connection Lines -->
+          <svg id="svgCanvas">
+            <defs>
+              <!-- Marker Arrowhead for Main Pipes -->
+              <marker id="pipe-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 9 5 L 0 9 z" fill="#000000"></path>
+              </marker>
+              <marker id="pipe-arrow-active" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 1 L 9 5 L 0 9 z" fill="#3b82f6"></path>
+              </marker>
+              <marker id="pipe-arrow-sub" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M 0 1 L 9 5 L 0 9 z" fill="#000000"></path>
+              </marker>
+            </defs>
+            <g id="connectionsGroup"></g>
+            <g id="tempConnectionGroup"></g>
+          </svg>
+
+          <!-- Empty Canvas Hint -->
+          <div class="empty-state-card" id="emptyState">
+            <div class="empty-badge"><i class="fas fa-cubes-stacked"></i></div>
+            <h3>Kanvas Masih Kosong</h3>
+            <p>Mulai arsitektur polosan tanpa batasan. Tambah kotak, buat sub-kotak, dan sambungkan pipa data antar kotak bersama tim.</p>
+            <button class="nb-btn nb-btn-yellow" id="emptyAddBtn">
+              <i class="fas fa-plus"></i> Tambah Kotak Pertama
+            </button>
+          </div>
+        </div>
+
+        <!-- HUD Controls -->
+        <div class="nb-hud-hint hide-mobile">
+          <span><b>Space / Drag</b> = Pindah Kanvas</span>
+          <span><b>Ctrl + Scroll</b> = Zoom</span>
+          <span><b>Tarik Titik Hitam</b> = Sambung Pipa</span>
+          <span><b>Klik X</b> = Putus Pipa</span>
+        </div>
+
+        <div class="nb-hud-zoom">
+          <button class="nb-zoom-btn" id="zoomOut" title="Perkecil"><i class="fas fa-minus"></i></button>
+          <span class="nb-zoom-value" id="zoomLevel">100%</span>
+          <button class="nb-zoom-btn" id="zoomIn" title="Perbesar"><i class="fas fa-plus"></i></button>
+          <button class="nb-zoom-btn" id="zoomReset" title="Reset Zoom"><i class="fas fa-arrows-rotate"></i></button>
+        </div>
+
+        <!-- MOBILE FLOATING ACTION BAR -->
+        <div class="mobile-floating-bar" id="mobileFloatingBar">
+          <button class="mf-btn yellow" id="mAddBoxBtn" title="Tambah Kotak">
+            <i class="fas fa-plus"></i> Kotak
+          </button>
+          <button class="mf-btn blue" id="mAddNoteBtn" title="Tambah Catatan">
+            <i class="fas fa-note-sticky"></i> Catatan
+          </button>
+          <button class="mf-btn purple" id="mPromptBtn" title="Prompt AI">
+            <i class="fas fa-wand-magic-sparkles"></i> Prompt
+          </button>
+          <button class="mf-btn white" id="mCenterBtn" title="Pusatkan">
+            <i class="fas fa-crosshairs"></i>
+          </button>
+          <button class="mf-btn white" id="mSidebarBtn" title="Panel RPD">
+            <i class="fas fa-file-contract"></i> RPD
+          </button>
+        </div>
+      </div>
+
+      <!-- SIDEBAR: LIVE PRD PREVIEW -->
+      <aside class="nb-sidebar" id="sidebarPanel">
+        <div class="sidebar-header">
+          <div class="sidebar-tabs">
+            <button class="sb-tab active" data-tab="prd">
+              <i class="fas fa-file-contract"></i> <span>RPD</span>
+            </button>
+            <button class="sb-tab" data-tab="pipes">
+              <i class="fas fa-diagram-project"></i> <span>Pipa</span> <span class="sb-badge" id="pipeCountBadge">0</span>
+            </button>
+            <button class="sb-tab" data-tab="notes">
+              <i class="fas fa-note-sticky"></i> <span>Catatan</span> <span class="sb-badge" id="noteCountBadge">0</span>
+            </button>
+          </div>
+          <button class="sb-collapse-btn" id="sidebarToggleBtn" title="Buka / Tutup Sidebar">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="sidebar-body">
+          <!-- TAB 1: RPD PREVIEW -->
+          <div class="sb-pane active" id="panePrd">
+            <div class="sb-meta-box">
+              <div class="sb-project-name" id="sbProjectName">Untitled Project</div>
+              <div class="sb-stats-grid">
+                <div class="stat-cell">
+                  <div class="stat-val" id="statNodes">0</div>
+                  <div class="stat-lbl">Kotak</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val" id="statSubs">0</div>
+                  <div class="stat-lbl">Sub-Kotak</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val" id="statFeatures">0</div>
+                  <div class="stat-lbl">Fitur</div>
+                </div>
+                <div class="stat-cell">
+                  <div class="stat-val" id="statPipes">0</div>
+                  <div class="stat-lbl">Pipa Alur</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sb-actions-row">
+              <button class="nb-btn nb-btn-white btn-sm flex-1" id="copyRpdBtn">
+                <i class="fas fa-copy"></i> Salin RPD
+              </button>
+              <button class="nb-btn nb-btn-purple btn-sm flex-1" id="quickPromptBtn">
+                <i class="fas fa-bolt"></i> Buat Prompt
+              </button>
+            </div>
+
+            <!-- Mobile Export Buttons in Sidebar -->
+            <div class="sb-mobile-exports show-mobile">
+              <button class="nb-btn nb-btn-white btn-sm flex-1" id="mPngBtn">
+                <i class="fas fa-image"></i> Export PNG
+              </button>
+              <button class="nb-btn nb-btn-white btn-sm flex-1" id="mMdBtn">
+                <i class="fas fa-file-lines"></i> Download .md
+              </button>
+            </div>
+
+            <!-- Live Tree Output -->
+            <div class="prd-tree-view" id="prdTreeContent">
+              <div class="empty-tree-placeholder">
+                <i class="fas fa-folder-open"></i>
+                <span>Belum ada kotak yang dibuat.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: PIPES & DATA FLOW LIST -->
+          <div class="sb-pane" id="panePipes">
+            <div class="pipes-guide-note">
+              <i class="fas fa-circle-info"></i>
+              <span>Setiap sambungan pipa langsung terintegrasi otomatis ke dalam PRD dan Prompt AI.</span>
+            </div>
+
+            <div class="pipes-list-wrap" id="pipesListContent">
+              <div class="empty-tree-placeholder">
+                <i class="fas fa-link-slash"></i>
+                <span>Belum ada pipa yang tersambung. Tarik titik hitam di kanan kotak ke kiri kotak lain.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: NOTES & QUESTIONS LIST -->
+          <div class="sb-pane" id="paneNotes">
+            <div class="pipes-guide-note" style="background:var(--nb-blue);">
+              <i class="fas fa-lightbulb"></i>
+              <span>Catatan & pertanyaan di sini otomatis dimasukkan ke Prompt AI agar dijawab & diberikan rekomendasi oleh AI.</span>
+            </div>
+
+            <div class="notes-sidebar-list" id="notesListContent">
+              <div class="empty-tree-placeholder">
+                <i class="fas fa-note-sticky"></i>
+                <span>Belum ada kotak catatan / pertanyaan. Klik tombol "+ Catatan" untuk menambahkan.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+
+
+
+
+  <!-- ============================================================ -->
+  <!-- MODAL: KELOLA PROYEK & BAGIKAN LINK SNAPSHOT (TLDRAW STYLE)  -->
+  <!-- ============================================================ -->
+  <div class="nb-modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalHeading">
+    <div class="nb-modal-card project-modal-card">
+      <div class="nb-modal-header" style="background:var(--nb-yellow);">
+        <div class="nb-modal-title">
+          <div class="modal-icon-badge" aria-hidden="true"><i class="fas fa-folder-open"></i></div>
+          <div>
+            <h3 id="projectModalHeading" data-i18n="projectModalTitle">Kelola Proyek Arsitektur</h3>
+            <span class="modal-subtitle" data-i18n="projectModalSub">Buat baru, ganti proyek, atau bagikan link instan</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeProjectModal" aria-label="Tutup Dialog Proyek"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="nb-modal-body project-modal-body">
+        <!-- Action Row: Buat Proyek Baru / Salin Snapshot Link -->
+        <div class="project-actions-grid">
+          <button class="nb-btn nb-btn-yellow" id="createNewProjectBtn" aria-label="Buat Proyek Baru Kosong">
+            <i class="fas fa-plus" aria-hidden="true"></i> <span data-i18n="newProjectBtn">+ Proyek Baru</span>
+          </button>
+          
+          <button class="nb-btn nb-btn-blue" id="duplicateProjectBtn" aria-label="Duplikasi Proyek Ini">
+            <i class="fas fa-copy" aria-hidden="true"></i> <span data-i18n="duplicateProjectBtn">Duplikasi Proyek</span>
+          </button>
+
+          <button class="nb-btn nb-btn-mint" id="shareSnapshotLinkBtn" aria-label="Salin Link Snapshot Instan">
+            <i class="fas fa-link" aria-hidden="true"></i> <span data-i18n="shareSnapshotBtn">Salin Link Snapshot</span>
+          </button>
+
+          <button class="nb-btn nb-btn-white" id="exportProjectJsonBtn" aria-label="Ekspor Proyek ke JSON">
+            <i class="fas fa-file-export" aria-hidden="true"></i> <span>Ekspor JSON</span>
+          </button>
+        </div>
+
+        <!-- Info Box Snapshot Sharing ala tldraw -->
+        <div class="tldraw-share-box">
+          <div class="ts-badge"><i class="fas fa-bolt" aria-hidden="true"></i> <span data-i18n="instantShareBadge">Bebas Biaya Server · Snapshot Sharing</span></div>
+          <p data-i18n="instantShareDesc">
+            Kamu bisa membagikan desain arsitektur ini ke siapa saja via tautan link snapshot. Data terenkode langsung di URL, jadi temanmu bisa membukanya tanpa perlu registrasi atau login!
+          </p>
+        </div>
+
+        <!-- Project List Section -->
+        <div class="project-list-section">
+          <div class="pls-header">
+            <span><i class="fas fa-layer-group" aria-hidden="true"></i> <span data-i18n="savedProjectsTitle">Daftar Proyek Kamu (Tersimpan di Browser):</span></span>
+          </div>
+          <div class="project-items-list" id="projectItemsList">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="nb-modal-footer">
+        <a href="https://sociabuzz.com/xumu_id/tribe" target="_blank" rel="noopener noreferrer" class="nb-btn nb-btn-donate" aria-label="Dukung Kreator via Sociabuzz">
+          <i class="fas fa-heart text-red" aria-hidden="true"></i> <span data-i18n="supportCreator">Dukung Kreator</span>
+        </a>
+        <button class="nb-btn nb-btn-white" id="closeProjectModalBottomBtn">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- MODAL: UNDANG TIM & BAGIKAN RUANGAN (REAL-TIME ROOM)         -->
+  <!-- ============================================================ -->
+  <div class="nb-modal-overlay" id="inviteModal" role="dialog" aria-modal="true" aria-labelledby="inviteModalHeading">
+    <div class="nb-modal-card invite-modal-card">
+      <div class="nb-modal-header" style="background:var(--nb-blue);">
+        <div class="nb-modal-title">
+          <div class="modal-icon-badge" aria-hidden="true"><i class="fas fa-people-arrows"></i></div>
+          <div>
+            <h3 id="inviteModalHeading">Undang Tim & Kolaborasi Live</h3>
+            <span class="modal-subtitle">Kendali kanvas real-time multi-pengguna</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeInviteModal" aria-label="Tutup Dialog Undang Tim"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="nb-modal-body invite-body">
+        <p class="invite-intro">
+          Bagikan tautan atau Room ID ini kepada rekan tim Anda. Semua anggota yang membuka tautan ini akan terhubung langsung ke kanvas yang sama dan bisa mengendalikan secara online serentak!
+        </p>
+
+        <div class="nb-form-group">
+          <label for="roomShareLinkInput">Tautan Ruangan Kolaborasi</label>
+          <div class="copy-input-row">
+            <input type="text" id="roomShareLinkInput" readonly spellcheck="false" aria-label="Tautan Ruangan Kolaborasi">
+            <button class="nb-btn nb-btn-yellow" id="copyRoomLinkBtn" aria-label="Salin Tautan Ruangan">
+              <i class="fas fa-copy" aria-hidden="true"></i> Salin
+            </button>
+          </div>
+        </div>
+
+        <div class="nb-form-group">
+          <label for="switchRoomIdInput">Ganti / Masuk ke Room ID Lain</label>
+          <div class="copy-input-row">
+            <input type="text" id="switchRoomIdInput" placeholder="Contoh: tim-alpha, sprint-2..." maxlength="30" aria-label="Input Room ID Baru">
+            <button class="nb-btn nb-btn-white" id="switchRoomBtn" aria-label="Pindah ke Room ID Baru">
+              <i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i> Pindah Room
+            </button>
+          </div>
+        </div>
+
+        <div class="online-now-box">
+          <div class="onb-header">
+            <span><i class="fas fa-circle-dot" style="color:#16a34a;" aria-hidden="true"></i> Tim di Ruang Ini:</span>
+          </div>
+          <div class="onb-list" id="modalOnlineList">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <div class="nb-modal-footer" style="display:flex; justify-content:space-between; width:100%;">
+        <button class="nb-btn nb-btn-white btn-xs" id="leaveRoomBtn" title="Kembali ke kanvas pribadi tanpa kolaborasi">
+          <i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i> Mode Pribadi
+        </button>
+        <button class="nb-btn nb-btn-yellow" id="closeInviteBottomBtn">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- MODAL: KELOLA FITUR & SPESIFIKASI SUB-KOTAK                  -->
+  <!-- ============================================================ -->
+  <div class="nb-modal-overlay" id="featuresModal" role="dialog" aria-modal="true" aria-labelledby="modalFeatureTitle">
+    <div class="nb-modal-card">
+      <div class="nb-modal-header">
+        <div class="nb-modal-title">
+          <div class="modal-icon-badge" aria-hidden="true"><i class="fas fa-list-check"></i></div>
+          <div>
+            <h3 id="modalFeatureTitle">Kelola Fitur Sub-Kotak</h3>
+            <span class="modal-subtitle" id="modalFeatureSubtitle">Spesifikasi</span>
+          </div>
+        </div>
+        <button class="nb-btn-close" id="closeFeaturesModal" aria-label="Tutup Dialog Fitur"><i class="fas fa-times" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="nb-modal-body">
+        <div class="nb-form-group">
+          <label for="modalFeaturesTextarea">Daftar Fitur / Spesifikasi (1 per baris)</label>
+          <div class="form-hint">Tulis fitur atau tanggung jawab sub-kotak ini secara bebas.</div>
+          <textarea id="modalFeaturesTextarea" placeholder="Contoh:&#10;Input form data pelanggan&#10;Validasi nomor telepon & email&#10;Kirim notifikasi SMS webhook" aria-label="Daftar Fitur Sub-Kotak"></textarea>
+        </div>
+
+        <div class="nb-form-row">
+          <div class="nb-form-group flex-1">
+            <label for="modalTechInput">Teknologi / Stack (Opsional)</label>
+            <input type="text" id="modalTechInput" placeholder="Misal: React, Node.js, Postgres..." aria-label="Teknologi Sub-Kotak">
+          </div>
+          <div class="nb-form-group flex-1">
+            <label for="modalProtocolInput">Protokol / Port (Opsional)</label>
+            <input type="text" id="modalProtocolInput" placeholder="Misal: REST HTTPS / Port 8080" aria-label="Protokol Sub-Kotak">
+          </div>
+        </div>
+      </div>
+
+      <div class="nb-modal-footer">
+        <button class="nb-btn nb-btn-white" id="cancelFeaturesModal">Batal</button>
+        <button class="nb-btn nb-btn-yellow" id="saveFeaturesModal">
+          <i class="fas fa-save" aria-hidden="true"></i> Simpan Fitur
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: KELOLA MULTI-PROYEK & SHARE LINK (TLDRAW STYLE)       -->
+  <!-- ============================================================ -->
+  <div class="nb-modal-overlay" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="projectModalHeading">
+    <div class="nb-modal-card">
+      <div class="nb-modal-header">
+        <div class="nb-modal-title">
+          <div class="modal-icon-badge" aria-hidden="true"><i class="fas fa-folder-tree"></i></div>
+          <div>
+            <h3 id="projectModalHeading">Manajemen Proyek Arsitektur</h3>
+            <span class="modal-subtitle">Tambah, Ganti & Bagikan Snapshot Seperti tldraw</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeProjectModal" aria-label="Tutup Dialog Manajemen Proyek"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="nb-modal-body">
+        <!-- Action Row -->
+        <div class="project-modal-actions-grid">
+          <button class="nb-btn nb-btn-yellow" id="createNewProjectBtn" aria-label="Buat Proyek Baru">
+            <i class="fas fa-plus" aria-hidden="true"></i> Proyek Baru
+          </button>
+          <button class="nb-btn nb-btn-white" id="duplicateProjectBtn" aria-label="Duplikasi Proyek Ini">
+            <i class="fas fa-clone" aria-hidden="true"></i> Duplikasi
+          </button>
+          <button class="nb-btn nb-btn-white" id="exportProjectRbBtn" aria-label="Ekspor File Proyek .rb">
+            <i class="fas fa-file-arrow-down" aria-hidden="true"></i> Ekspor .rb
+          </button>
+          <button class="nb-btn nb-btn-white" id="importProjectRbBtn" aria-label="Impor File Proyek .rb">
+            <i class="fas fa-file-arrow-up" aria-hidden="true"></i> Impor .rb
+          </button>
+          <button class="nb-btn nb-btn-blue" id="shareSnapshotLinkBtn" aria-label="Bagikan Link Snapshot Proyek">
+            <i class="fas fa-share-nodes" aria-hidden="true"></i> Salin Link Share
+          </button>
+        </div>
+        <input type="file" id="rbFileInput" accept=".rb,.json" style="display:none;" aria-label="Pilih File Proyek RB">
+
+        <!-- Zero-Cost Share Info Box -->
+        <div class="tldraw-share-box">
+          <div class="tsb-icon" aria-hidden="true"><i class="fas fa-bolt"></i></div>
+          <div>
+            <strong>100% Serverless & Gratis Selamanya:</strong>
+            <p>Fitur "Salin Link Share" membungkus seluruh kanvas ke dalam tautan URL. Siapapun yang membuka link langsung mendapatkan salinan arsitektur tanpa perlu akun ataupun server berbayar.</p>
+          </div>
+        </div>
+
+        <!-- Project List Section -->
+        <div class="project-list-section">
+          <div class="pls-header">
+            <span><i class="fas fa-layer-group" aria-hidden="true"></i> Daftar Proyek Tersimpan di Perangkat Ini</span>
+          </div>
+          <div class="project-items-list" id="projectsListContainer">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="nb-modal-footer">
+        <button class="nb-btn nb-btn-white" id="closeProjectModalBottomBtn">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- MODAL: MASTER AI PROMPT GENERATOR                            -->
+  <!-- ============================================================ -->
+  <div class="nb-modal-overlay" id="promptModal" role="dialog" aria-modal="true" aria-labelledby="promptModalHeading">
+    <div class="nb-modal-card modal-wide">
+      <div class="nb-modal-header header-purple">
+        <div class="nb-modal-title">
+          <div class="modal-icon-badge" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
+          <div>
+            <h3 id="promptModalHeading">Generator Prompt AI · PRD & Arsitektur Lengkap</h3>
+            <span class="modal-subtitle">Auto-Sync Kotak, Pipa, & Kotak Catatan Pertanyaan</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closePromptModal" aria-label="Tutup Dialog AI Prompt"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+
+      <div class="modal-split-view">
+        <!-- Left: Settings Form -->
+        <div class="prompt-form-side">
+          <div class="nb-form-group">
+            <label for="promptModeSelect">Mode Dokumen AI</label>
+            <select id="promptModeSelect" class="nb-select" aria-label="Mode Dokumen AI">
+              <option value="vibe_coding" selected>⚡ Vibe Coding Blueprint (Antigravity / Cursor / Claude Code / Devin / Windsurf)</option>
+              <option value="architect">📐 Enterprise Software Architect (ADD & Tech Spec)</option>
+              <option value="prd_complete">📋 Product Requirement Document (PRD / RPD Lengkap)</option>
+              <option value="roadmap_sprint">🚀 Roadmap Implementasi & Pembagian Sprint Jira</option>
+              <option value="schema_api">🔌 Database Schema & Kontrak API / Alur Data Pipa</option>
+              <option value="security_resilience">🛡️ Keamanan, Resilience, & Penanganan Error Sambungan</option>
+            </select>
+          </div>
+
+          <div class="nb-form-row">
+            <div class="nb-form-group flex-1">
+              <label for="promptTargetModel">Target AI</label>
+              <select id="promptTargetModel" class="nb-select" aria-label="Target Model AI">
+                <option value="vibe_agent" selected>Autonomous AI Coding Agent (Antigravity / Cursor / Claude Code)</option>
+                <option value="universal">Universal LLM (ChatGPT, Claude, Gemini)</option>
+                <option value="claude">Claude 3.7 (Deep Thinking Mode)</option>
+                <option value="deepseek">DeepSeek R1 / Reasoning Model</option>
+                <option value="cursor">Cursor Rules / .cursorrules File</option>
+              </select>
+            </div>
+            <div class="nb-form-group flex-1">
+              <label for="promptLanguage">Bahasa</label>
+              <select id="promptLanguage" class="nb-select" aria-label="Bahasa Keluaran Prompt">
+                <option value="id" selected>Bahasa Indonesia</option>
+                <option value="en">English</option>
+                <option value="mixed">Campuran (Bilingual Tech)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="nb-form-group">
+            <label>Kedalaman Pembahasan</label>
+            <div class="nb-radio-group" role="radiogroup" aria-label="Kedalaman Pembahasan">
+              <label class="nb-radio-pill">
+                <input type="radio" name="promptDepth" value="compact" aria-label="Ringkas">
+                <span>Ringkas</span>
+              </label>
+              <label class="nb-radio-pill active">
+                <input type="radio" name="promptDepth" value="detailed" checked aria-label="Mendalam">
+                <span>Mendalam (Recommended)</span>
+              </label>
+              <label class="nb-radio-pill">
+                <input type="radio" name="promptDepth" value="exhaustive" aria-label="Sangat Rinci">
+                <span>Sangat Rinci (Exhaustive)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="nb-form-group">
+            <label for="promptExtraNotes">Instruksi / Catatan Tambahan (Bebas)</label>
+            <textarea id="promptExtraNotes" rows="2" placeholder="Tulis instruksi khusus, misal: tekankan pada kecepatan transmisi pipa, validasi skema data ketat, dsb..." aria-label="Instruksi Catatan Tambahan"></textarea>
+          </div>
+
+          <div class="prompt-stats-bar">
+            <div>Estimasi Token: <b id="promptTokenEstimate">~800 tokens</b></div>
+            <div>Sinkronisasi: <b id="promptIncludedSummary">0 Kotak, 0 Pipa</b></div>
+          </div>
+        </div>
+
+        <!-- Right: Prompt Output Box -->
+        <div class="prompt-output-side">
+          <div class="output-header-bar">
+            <span class="output-title"><i class="fas fa-terminal" aria-hidden="true"></i> HASIL PROMPT SIAP COPY</span>
+            <div class="output-actions">
+              <button class="nb-btn nb-btn-white btn-xs" id="copyPromptResultBtn" aria-label="Salin Teks Prompt">
+                <i class="fas fa-copy" aria-hidden="true"></i> Salin Prompt
+              </button>
+              <button class="nb-btn nb-btn-white btn-xs" id="downloadPromptResultBtn" aria-label="Simpan Prompt ke File Teks">
+                <i class="fas fa-download" aria-hidden="true"></i> Simpan .txt
+              </button>
+            </div>
+          </div>
+          <div class="output-textarea-wrap">
+            <textarea id="promptResultTextarea" readonly spellcheck="false" aria-label="Hasil Prompt AI Lengkap"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="nb-modal-footer">
+        <button class="nb-btn nb-btn-white" id="closePromptBottomBtn">Tutup</button>
+        <button class="nb-btn nb-btn-purple" id="copyPromptPrimaryBtn">
+          <i class="fas fa-copy" aria-hidden="true"></i> Salin ke Clipboard & Siap Pakai
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- MODAL: IN-DASHBOARD CUSTOM CONFIRMATION MODAL               -->
+  <!-- ============================================================ -->
+  <div class="nb-modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="nb-modal-card confirm-modal-card">
+      <div class="nb-modal-header header-red" id="confirmModalHeader">
+        <div class="nb-modal-title">
+          <div class="modal-icon-badge text-red" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></div>
+          <div>
+            <h3 id="confirmModalTitle">Konfirmasi Hapus</h3>
+            <span class="modal-subtitle">Tindakan tidak dapat dibatalkan</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeConfirmModal" aria-label="Tutup Dialog Konfirmasi"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="nb-modal-body confirm-body">
+        <p id="confirmModalMessage">Apakah kamu yakin ingin menghapus komponen ini?</p>
+      </div>
+      <div class="nb-modal-footer">
+        <button class="nb-btn nb-btn-white" id="confirmCancelBtn">Batal</button>
+        <button class="nb-btn nb-btn-red" id="confirmOkBtn">
+          <i class="fas fa-trash-can" aria-hidden="true"></i> <span id="confirmOkText">Hapus</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="nb-toast" id="toast">
+    <div class="toast-icon-wrap"><i class="fas fa-check"></i></div>
+    <div class="toast-text" id="toastMessage">Berhasil disimpan</div>
+  </div>
+
+  <!-- MAIN SCRIPT -->
+  <script src="app.js"></script>
+
+  <!-- MAIN DASHBOARD SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
