@@ -65,7 +65,7 @@
       projectPlaceholder: 'Ketik nama arsitektur...',
       autoSaved: 'Auto-Saved',
       inviteTeam: 'Undang Tim',
-      loginGoogle: 'Login Google',
+      userProfile: 'Profil Kamu',
       addBox: 'Tambah Kotak',
       addNote: '+ Catatan',
       promptBtn: 'Prompt AI',
@@ -129,17 +129,17 @@
       feat6Text: 'Tampilan beradaptasi mulus di PC monitor ultra-wide, laptop, tablet iPad, hingga smartphone dengan kontrol sentuh dan navigasi kanvas yang intuitif.',
 
       // Split Section
-      splitTag: 'MULTI-PERANGKAT & GOOGLE AUTH',
+      splitTag: 'MULTI-PERANGKAT & INSTANT SHARE',
       splitTitle: 'Buka di PC, Diskusi di Tablet, Pantau dari HP.',
-      splitDesc: 'Tak perlu instalasi berat. Buka langsung di browser perangkat apa pun, masuk dengan akun Google 1-klik, dan bagikan tautan ruangan untuk mulai berkolaborasi.',
-      splitCheck1: '<b>Google Login Cepat:</b> Sinkronisasi profil dan sesi kerja dengan aman.',
-      splitCheck2: '<b>Navigasi Sentuh Fleksibel:</b> Pan, zoom, dan sambungkan pipa data secara presisi di layar mana pun.',
-      splitCheck3: '<b>Share Link Seketika:</b> Satu klik untuk menyalin tautan ruangan kolaborasi untuk seluruh tim.',
+      splitDesc: 'Tak perlu registrasi atau login akun. Cukup ketik nama/username kamu, buka di browser perangkat apa pun, dan bagikan tautan ruangan untuk mulai berkolaborasi seketika.',
+      splitCheck1: '<b>Tanpa Login / Registrasi:</b> Masukkan username dan pilih avatar warna favorit secara instan.',
+      splitCheck2: '<b>Navigasi Sentuh Fleksibel:</b> Geser, zoom, ubah ukuran kotak, dan sambungkan pipa data secara presisi di layar mana pun.',
+      splitCheck3: '<b>Share Link Seketika:</b> Satu klik tombol bagikan untuk mengundang tim lewat tautan ruangan unik.',
       mockupScreenTitle: 'Rancang Bareng Studio Multi-Perangkat',
       mockupPill1: 'PC Desktop',
       mockupPill2: 'Tablet / iPad',
       mockupPill3: 'Smartphone',
-      mockupConnectedUsers: '4 Arsitek Terhubung',
+      mockupConnectedUsers: 'Ruang Kolaborasi Real-Time',
       mockupSyncBadge: 'Otomatis Tersimpan & Tersinkronkan Real-Time',
 
       // CTA Banner & Footer & Projects
@@ -170,7 +170,7 @@
       projectPlaceholder: 'Enter architecture title...',
       autoSaved: 'Auto-Saved',
       inviteTeam: 'Invite Team',
-      loginGoogle: 'Google Login',
+      userProfile: 'Your Profile',
       addBox: 'Add Box',
       addNote: '+ Note',
       exportBtn: 'Export',
@@ -237,17 +237,17 @@
       feat6Text: 'Smoothly adapts across ultra-wide desktop monitors, laptops, tablets, and smartphones with intuitive touch gestures and canvas navigation.',
 
       // Split Section
-      splitTag: 'MULTI-DEVICE & GOOGLE AUTH',
+      splitTag: 'MULTI-DEVICE & INSTANT SHARING',
       splitTitle: 'Design on Desktop, Review on Tablet, Inspect on Mobile.',
-      splitDesc: 'Zero installs required. Open instantly in any browser, authenticate with Google in 1 click, and share your room link to start architecting together.',
-      splitCheck1: '<b>Fast Google Login:</b> Seamless session and workspace profile sync.',
-      splitCheck2: '<b>Touch & Pointer Friendly:</b> Smooth pan, zoom, and pipe routing across every screen size.',
-      splitCheck3: '<b>Instant Room Sharing:</b> One-click link copy to invite engineers and architects.',
+      splitDesc: 'Zero registration or complex login required. Simply pick your username, open in any device browser, and share your unique room link to collaborate in seconds.',
+      splitCheck1: '<b>No Login / Sign-up:</b> Instant custom nickname and avatar color picker.',
+      splitCheck2: '<b>Touch & Pointer Friendly:</b> Smooth pan, zoom, box resize, and pipe routing on any screen.',
+      splitCheck3: '<b>Instant Room Sharing:</b> One-click link copy to invite engineers and teammates.',
       mockupScreenTitle: 'Rancang Bareng Multi-Device Studio',
       mockupPill1: 'Desktop PC',
       mockupPill2: 'Tablet / iPad',
       mockupPill3: 'Smartphone',
-      mockupConnectedUsers: '4 Architects Connected',
+      mockupConnectedUsers: 'Real-Time Collaboration Room',
       mockupSyncBadge: 'Auto-Saved & Real-Time Synchronized',
 
       // CTA Banner & Footer & Projects
@@ -1450,24 +1450,39 @@
   function updateCollaboratorsUI() {
     if (!collabAvatarsStack) return;
 
-    let userList = Array.from(activeCollaborators.values());
-    if (userList.length === 0 && currentUser) {
-      userList = [currentUser];
+    // Hanya tampilkan avatar pengguna lain jika benar-benar ada orang lain yang terhubung
+    const otherUsers = Array.from(activeCollaborators.values()).filter(u => u.id !== currentUser?.id);
+    if (otherUsers.length === 0) {
+      collabAvatarsStack.innerHTML = '';
+      collabAvatarsStack.style.display = 'none';
+    } else {
+      collabAvatarsStack.style.display = 'flex';
+      collabAvatarsStack.innerHTML = otherUsers.slice(0, 4).map(u => `
+        <div class="collab-avatar-chip" style="background:${u.color};" title="${escapeHtml(u.name)} (Online)">
+          ${escapeHtml(u.name.charAt(0).toUpperCase())}
+        </div>
+      `).join('') + (otherUsers.length > 4 ? `<div class="collab-avatar-chip" style="background:#000;">+${otherUsers.length - 4}</div>` : '');
     }
 
-    collabAvatarsStack.innerHTML = userList.slice(0, 4).map(u => `
-      <div class="collab-avatar-chip" style="background:${u.color};" title="${escapeHtml(u.name)}">
-        ${escapeHtml(u.name.charAt(0).toUpperCase())}
-      </div>
-    `).join('') + (userList.length > 4 ? `<div class="collab-avatar-chip" style="background:#000;">+${userList.length - 4}</div>` : '');
-
     if (modalOnlineList) {
-      modalOnlineList.innerHTML = userList.map(u => `
-        <div class="onb-item">
-          <div class="onb-avatar" style="background:${u.color};">${escapeHtml(u.name.charAt(0).toUpperCase())}</div>
-          <span>${escapeHtml(u.name)} ${u.id === currentUser?.id ? '(Kamu)' : ''}</span>
-        </div>
-      `).join('');
+      if (otherUsers.length === 0) {
+        modalOnlineList.innerHTML = `
+          <div class="onb-item">
+            <div class="onb-avatar" style="background:${currentUser?.color || '#3b82f6'};">${escapeHtml((currentUser?.name || 'A').charAt(0).toUpperCase())}</div>
+            <span>${escapeHtml(currentUser?.name || 'Kamu')} (Kamu)</span>
+          </div>
+          <div style="font-size:0.75rem; color:#6b7280; padding:6px 4px;">
+            ${currentLang === 'en' ? 'No other teammates connected yet. Share the link above to invite!' : 'Belum ada rekan lain yang terhubung. Bagikan link di atas untuk mengundang!'}
+          </div>`;
+      } else {
+        const fullList = [currentUser, ...otherUsers].filter(Boolean);
+        modalOnlineList.innerHTML = fullList.map(u => `
+          <div class="onb-item">
+            <div class="onb-avatar" style="background:${u.color};">${escapeHtml(u.name.charAt(0).toUpperCase())}</div>
+            <span>${escapeHtml(u.name)} ${u.id === currentUser?.id ? '(Kamu)' : '<span style="color:#16a34a; font-size:0.72rem; font-weight:700;">● Online</span>'}</span>
+          </div>
+        `).join('');
+      }
     }
   }
 
@@ -1647,9 +1662,29 @@
         return;
       }
 
-      // 2. Drag Kotak di HP: Sentuh di mana saja pada kotak/catatan kecuali field ketikan & tombol aksi
+      // 2. Resize Kotak / Catatan di HP: Sentuh handle resize di pojok kanan bawah
+      const resizeEl = target?.closest('.resize-handle');
+      if (resizeEl) {
+        e.preventDefault();
+        const parentBoxEl = resizeEl.closest('.main-box, .note-box');
+        if (parentBoxEl) {
+          const item = mainBoxes.find(b => b.id === parentBoxEl.id) || notes.find(n => n.id === parentBoxEl.id);
+          if (item) {
+            isResizing = true;
+            resizeBoxId = item.id;
+            resizeStartX = touch.clientX;
+            resizeStartY = touch.clientY;
+            resizeStartW = item.w || (parentBoxEl.classList.contains('note-box') ? 230 : 240);
+            resizeStartH = item.h || (parentBoxEl.classList.contains('note-box') ? 140 : 120);
+            selectBox(item.id);
+            return;
+          }
+        }
+      }
+
+      // 3. Drag Kotak di HP: Sentuh di mana saja pada kotak/catatan kecuali field ketikan, tombol aksi, dan resize handle
       const boxEl = target?.closest('.main-box, .note-box');
-      const isInteractive = target?.closest('input, textarea, button, .sub-features-btn, .sub-del-btn, .box-del-btn, .box-tool-btn');
+      const isInteractive = target?.closest('input, textarea, button, .sub-features-btn, .sub-del-btn, .box-del-btn, .box-tool-btn, .resize-handle, .color-indicator');
       if (boxEl && !isInteractive) {
         const item = mainBoxes.find(b => b.id === boxEl.id) || notes.find(n => n.id === boxEl.id);
         if (item) {
@@ -1665,7 +1700,7 @@
         }
       }
 
-      // 3. Sambungkan jika sedang dalam mode connecting dan sentuh port target
+      // 4. Sambungkan jika sedang dalam mode connecting dan sentuh port target
       if (isConnecting && connectFrom) {
         const inPort = findPortTarget(touch.clientX, touch.clientY, connectFrom.boxId, connectFrom.subId);
         if (inPort) {
@@ -1675,7 +1710,7 @@
         }
       }
 
-      // 4. Pan kanvas jika sentuh kanvas kosong
+      // 5. Pan kanvas jika sentuh kanvas kosong
       if (!target?.closest('.main-box, .note-box, .nb-hud-zoom, .mobile-floating-bar')) {
         isTouchPanning = true;
         touchStartX = touch.clientX;
@@ -1716,6 +1751,22 @@
         const sx = parseFloat(tempLine.dataset.sx);
         const sy = parseFloat(tempLine.dataset.sy);
         tempLine.setAttribute('d', calculateDragBezier(sx, sy, mx, my, connectFrom.portType, targetType));
+      } else if (isResizing && resizeBoxId) {
+        e.preventDefault();
+        const item = mainBoxes.find(b => b.id === resizeBoxId) || notes.find(n => n.id === resizeBoxId);
+        if (item) {
+          const dx = (touch.clientX - resizeStartX) / zoom;
+          const dy = (touch.clientY - resizeStartY) / zoom;
+          item.w = Math.max(190, resizeStartW + dx);
+          item.h = Math.max(100, resizeStartH + dy);
+
+          const el = document.getElementById(item.id);
+          if (el) {
+            el.style.width = item.w + 'px';
+            el.style.minHeight = item.h + 'px';
+          }
+          redrawConnections();
+        }
       } else if (isDraggingBox && dragBoxId) {
         e.preventDefault();
         const item = mainBoxes.find(b => b.id === dragBoxId) || notes.find(n => n.id === dragBoxId);
@@ -1739,6 +1790,12 @@
   }, { passive: false });
 
   document.addEventListener('touchend', (e) => {
+    if (isResizing) {
+      isResizing = false;
+      resizeBoxId = null;
+      redrawConnections();
+      saveToLocalStorage();
+    }
     if (isDraggingBox) {
       isDraggingBox = false;
       dragBoxId = null;
@@ -2377,17 +2434,26 @@
     const resizeHandle = document.createElement('div');
     resizeHandle.className = 'resize-handle';
     resizeHandle.title = 'Tarik untuk resize kotak';
-    resizeHandle.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
+    const startBoxResize = (clientX, clientY) => {
       isResizing = true;
       resizeBoxId = box.id;
-      resizeStartX = e.clientX;
-      resizeStartY = e.clientY;
+      resizeStartX = clientX;
+      resizeStartY = clientY;
       resizeStartW = box.w || 240;
       resizeStartH = box.h || 120;
       selectBox(box.id);
+    };
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      startBoxResize(e.clientX, e.clientY);
     });
+    resizeHandle.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const touch = e.touches[0];
+      startBoxResize(touch.clientX, touch.clientY);
+    }, { passive: false });
     div.appendChild(resizeHandle);
 
     // Drag handle & header events
@@ -2589,17 +2655,26 @@
     const resizeHandle = document.createElement('div');
     resizeHandle.className = 'resize-handle';
     resizeHandle.title = 'Tarik untuk resize catatan';
-    resizeHandle.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
+    const startNoteResize = (clientX, clientY) => {
       isResizing = true;
       resizeBoxId = note.id;
-      resizeStartX = e.clientX;
-      resizeStartY = e.clientY;
+      resizeStartX = clientX;
+      resizeStartY = clientY;
       resizeStartW = note.w || 230;
       resizeStartH = note.h || 140;
       selectBox(note.id);
+    };
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      startNoteResize(e.clientX, e.clientY);
     });
+    resizeHandle.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const touch = e.touches[0];
+      startNoteResize(touch.clientX, touch.clientY);
+    }, { passive: false });
     div.appendChild(resizeHandle);
 
     // Drag handle event (pin icon & header)
