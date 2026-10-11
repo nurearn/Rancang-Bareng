@@ -360,39 +360,70 @@
     const absDy = Math.abs(dy);
 
     if (dx >= 20) {
-      const curvature = Math.max(40, Math.min(260, absDx * 0.45 + absDy * 0.08));
+      // Normal Left-to-Right curve
+      const curvature = Math.max(40, Math.min(240, absDx * 0.45 + absDy * 0.08));
       return `M ${x1} ${y1} C ${x1 + curvature} ${y1}, ${x2 - curvature} ${y2}, ${x2} ${y2}`;
     } else {
-      const clearance = Math.max(50, Math.min(200, (20 - dx) * 0.35 + absDy * 0.15));
-      return `M ${x1} ${y1} C ${x1 + clearance} ${y1}, ${x2 - clearance} ${y2}, ${x2} ${y2}`;
+      // Reverse Right-to-Left or loop-around curve: arches gracefully around boxes without clipping
+      const clearanceX = Math.max(45, Math.min(95, absDx * 0.2 + 40));
+      const signY = (y2 >= y1) ? 1 : -1;
+      const vArc = (absDy < 40) ? -75 : signY * Math.max(55, Math.min(130, absDy * 0.45 + 30));
+      return `M ${x1} ${y1} C ${x1 + clearanceX} ${y1 + vArc}, ${x2 - clearanceX} ${y2 - vArc}, ${x2} ${y2}`;
     }
   }
 
-  // Robust target finding: direct port, parent sub-box, parent main-box, or 42px proximity snap
-  function findInputPortTarget(clientX, clientY) {
+  // Smooth live elastic bezier for dragging tempLine with pointer or finger
+  function calculateDragBezier(sx, sy, mx, my, portType = 'output') {
+    if (portType === 'output') {
+      if (mx >= sx) {
+        const c = Math.max(25, Math.min(140, (mx - sx) * 0.45));
+        return `M ${sx} ${sy} C ${sx + c} ${sy}, ${mx - c} ${my}, ${mx} ${my}`;
+      } else {
+        // Dragging leftwards from right output port: tethers directly to cursor without shooting away
+        const c = Math.max(30, Math.min(95, (sx - mx) * 0.35));
+        return `M ${sx} ${sy} C ${sx + c} ${sy}, ${mx + c * 0.5} ${my}, ${mx} ${my}`;
+      }
+    } else {
+      if (mx <= sx) {
+        const c = Math.max(25, Math.min(140, (sx - mx) * 0.45));
+        return `M ${sx} ${sy} C ${sx - c} ${sy}, ${mx + c} ${my}, ${mx} ${my}`;
+      } else {
+        // Dragging rightwards from left input port
+        const c = Math.max(30, Math.min(95, (mx - sx) * 0.35));
+        return `M ${sx} ${sy} C ${sx - c} ${sy}, ${mx - c * 0.5} ${my}, ${mx} ${my}`;
+      }
+    }
+  }
+
+  // Robust target finding supporting both input and output ports with 48px proximity snap
+  function findPortTarget(clientX, clientY, preferredType = 'input') {
+    const oppType = preferredType === 'input' ? 'input' : 'output';
     const target = document.elementFromPoint(clientX, clientY);
     if (target) {
-      const directPort = target.closest('.main-port.input, .sub-port.input');
+      const directPort = target.closest(`.main-port.${oppType}, .sub-port.${oppType}`);
       if (directPort) return directPort;
+
+      const anyPort = target.closest('.main-port, .sub-port');
+      if (anyPort) return anyPort;
 
       const subBox = target.closest('.sub-box');
       if (subBox) {
-        const subIn = subBox.querySelector('.sub-port.input');
-        if (subIn) return subIn;
+        const subP = subBox.querySelector(`.sub-port.${oppType}`);
+        if (subP) return subP;
       }
 
       const mainBox = target.closest('.main-box');
       if (mainBox) {
-        const mainIn = mainBox.querySelector('.main-port.input');
-        if (mainIn) return mainIn;
+        const mainP = mainBox.querySelector(`.main-port.${oppType}`);
+        if (mainP) return mainP;
       }
     }
 
-    const allInputs = document.querySelectorAll('.main-port.input, .sub-port.input');
+    const allPorts = document.querySelectorAll(`.main-port.${oppType}, .sub-port.${oppType}`);
     let bestPort = null;
-    let bestDist = 42;
+    let bestDist = 48;
 
-    allInputs.forEach(p => {
+    allPorts.forEach(p => {
       const r = p.getBoundingClientRect();
       const px = r.left + r.width / 2;
       const py = r.top + r.height / 2;
@@ -404,6 +435,11 @@
     });
 
     return bestPort;
+  }
+
+  // Backward compatibility alias
+  function findInputPortTarget(clientX, clientY) {
+    return findPortTarget(clientX, clientY, 'input');
   }
 
   // Neo-Brutalist Clean Header Colors
@@ -1443,21 +1479,39 @@
         }
       }
 
-      const outPort = target?.closest('.main-port.output, .sub-port.output');
-      if (outPort) {
+      const portEl = target?.closest('.main-port, .sub-port');
+      if (portEl) {
         e.preventDefault();
-        const boxId = outPort.dataset.boxId;
-        const subId = outPort.dataset.subId || null;
-        const portLevel = outPort.dataset.portLevel;
+        const boxId = portEl.dataset.boxId;
+        const subId = portEl.dataset.subId || null;
+        const portLevel = portEl.dataset.portLevel || (subId ? 'sub' : 'main');
+        const portType = portEl.classList.contains('input') ? 'input' : 'output';
+
         isConnecting = true;
-        connectFrom = { type: portLevel, boxId, subId, portType: 'output' };
+        connectFrom = { type: portLevel, boxId, subId, portType };
         viewport.classList.add('connecting');
-        highlightInputPorts();
+
+        if (!tempLine) {
+          tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          tempLine.setAttribute('class', 'temp-pipe-path');
+          tempConnectionGroup.appendChild(tempLine);
+        }
+
+        const boardRect = board.getBoundingClientRect();
+        const r = portEl.getBoundingClientRect();
+        const sx = (r.left + r.width / 2 - boardRect.left) / zoom;
+        const sy = (r.top + r.height / 2 - boardRect.top) / zoom;
+        tempLine.dataset.sx = sx;
+        tempLine.dataset.sy = sy;
+        tempLine.setAttribute('d', `M ${sx} ${sy} L ${sx} ${sy}`);
+
+        highlightOppositePorts(portType);
         return;
       }
 
       if (isConnecting && connectFrom) {
-        const inPort = findInputPortTarget(touch.clientX, touch.clientY);
+        const targetType = connectFrom.portType === 'output' ? 'input' : 'output';
+        const inPort = findPortTarget(touch.clientX, touch.clientY, targetType);
         if (inPort) {
           e.preventDefault();
           completeConnection(inPort);
@@ -1486,7 +1540,25 @@
       setZoom(touchStartZoom * factor);
     } else if (e.touches.length === 1) {
       const touch = e.touches[0];
-      if (isDraggingBox && dragBoxId) {
+      if (isConnecting && tempLine && connectFrom) {
+        e.preventDefault();
+        const boardRect = board.getBoundingClientRect();
+        let mx = (touch.clientX - boardRect.left) / zoom;
+        let my = (touch.clientY - boardRect.top) / zoom;
+
+        // Smart snap to opposite target port on mobile touch drag
+        const targetType = connectFrom.portType === 'output' ? 'input' : 'output';
+        const hoveredTarget = findPortTarget(touch.clientX, touch.clientY, targetType);
+        if (hoveredTarget) {
+          const hr = hoveredTarget.getBoundingClientRect();
+          mx = (hr.left + hr.width / 2 - boardRect.left) / zoom;
+          my = (hr.top + hr.height / 2 - boardRect.top) / zoom;
+        }
+
+        const sx = parseFloat(tempLine.dataset.sx);
+        const sy = parseFloat(tempLine.dataset.sy);
+        tempLine.setAttribute('d', calculateDragBezier(sx, sy, mx, my, connectFrom.portType));
+      } else if (isDraggingBox && dragBoxId) {
         e.preventDefault();
         const item = mainBoxes.find(b => b.id === dragBoxId) || notes.find(n => n.id === dragBoxId);
         if (item) {
@@ -1515,11 +1587,16 @@
       redrawConnections();
       saveToLocalStorage();
     }
-    if (isConnecting && connectFrom && e.changedTouches && e.changedTouches.length > 0) {
-      const touch = e.changedTouches[0];
-      const inPort = findInputPortTarget(touch.clientX, touch.clientY);
-      if (inPort) {
-        completeConnection(inPort);
+    if (isConnecting && connectFrom) {
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        const targetType = connectFrom.portType === 'output' ? 'input' : 'output';
+        const inPort = findPortTarget(touch.clientX, touch.clientY, targetType);
+        if (inPort) {
+          completeConnection(inPort);
+        } else {
+          cancelConnection();
+        }
       } else {
         cancelConnection();
       }
@@ -1740,22 +1817,23 @@
       return;
     }
 
-    if (isConnecting && tempLine) {
+    if (isConnecting && tempLine && connectFrom) {
       const boardRect = board.getBoundingClientRect();
       let mx = (e.clientX - boardRect.left) / zoom;
       let my = (e.clientY - boardRect.top) / zoom;
 
-      // Smart magnetic snap: saat kursor dekat ke port input tujuan, snap garis presisi ke tengah port itu
-      const hoveredInput = findInputPortTarget(e.clientX, e.clientY);
-      if (hoveredInput) {
-        const hr = hoveredInput.getBoundingClientRect();
+      // Smart magnetic snap: saat kursor dekat ke port lawan tujuan, snap garis presisi ke tengah port itu
+      const targetType = connectFrom.portType === 'output' ? 'input' : 'output';
+      const hoveredTarget = findPortTarget(e.clientX, e.clientY, targetType);
+      if (hoveredTarget) {
+        const hr = hoveredTarget.getBoundingClientRect();
         mx = (hr.left + hr.width / 2 - boardRect.left) / zoom;
         my = (hr.top + hr.height / 2 - boardRect.top) / zoom;
       }
 
       const sx = parseFloat(tempLine.dataset.sx);
       const sy = parseFloat(tempLine.dataset.sy);
-      tempLine.setAttribute('d', calculatePipeBezier(sx, sy, mx, my));
+      tempLine.setAttribute('d', calculateDragBezier(sx, sy, mx, my, connectFrom.portType));
     }
 
     // Multiplayer cursor broadcast
@@ -1797,11 +1875,12 @@
       saveToLocalStorage();
     }
 
-    if (isConnecting) {
-      const inputPort = findInputPortTarget(e.clientX, e.clientY);
+    if (isConnecting && connectFrom) {
+      const targetType = connectFrom.portType === 'output' ? 'input' : 'output';
+      const targetPort = findPortTarget(e.clientX, e.clientY, targetType);
       // Jika dilepas tepat di atas port target saat drag: sambungkan!
-      if (inputPort && connectFrom) {
-        completeConnection(inputPort);
+      if (targetPort) {
+        completeConnection(targetPort);
       }
       // PENTING: Jika dilepas di kanvas kosong, JANGAN BATALKAN! Mode 1-klik tetap aktif agar user bisa santai mengarahkan kursor ke pipa berikutnya.
     }
@@ -2534,28 +2613,39 @@
     connections.forEach(conn => drawConnection(conn));
   }
 
-  // Sambungkan pipa (support multi-connect, sub-to-sub, main-to-sub, sub-to-main, dll)
-  function completeConnection(inputPort) {
-    if (!connectFrom || !inputPort) return;
-    const toBoxId = inputPort.dataset.boxId;
-    const toSubId = inputPort.dataset.subId || null;
-    const toLevel = inputPort.dataset.portLevel || (toSubId ? 'sub' : 'main');
+  // Sambungkan pipa (support multi-connect, sub-to-sub, main-to-sub, kanan-ke-kiri, kiri-ke-kanan)
+  function completeConnection(targetPort) {
+    if (!connectFrom || !targetPort) return;
+    const toBoxId = targetPort.dataset.boxId;
+    const toSubId = targetPort.dataset.subId || null;
+    const toLevel = targetPort.dataset.portLevel || (toSubId ? 'sub' : 'main');
 
     const isSelf = (connectFrom.boxId === toBoxId && connectFrom.subId === toSubId);
     if (!isSelf) {
+      // Normalisasi otomatis: from selalu OUTPUT, to selalu INPUT agar panah selalu konsisten dan akurat
+      let fromItem, toItem;
+      if (connectFrom.portType === 'output') {
+        fromItem = { boxId: connectFrom.boxId, subId: connectFrom.subId, portType: 'output' };
+        toItem = { boxId: toBoxId, subId: toSubId, portType: 'input' };
+      } else {
+        // User mulai klik dari port input, lalu klik port output
+        fromItem = { boxId: toBoxId, subId: toSubId, portType: 'output' };
+        toItem = { boxId: connectFrom.boxId, subId: connectFrom.subId, portType: 'input' };
+      }
+
       const duplicate = connections.some(c =>
-        c.from.boxId === connectFrom.boxId &&
-        c.from.subId === connectFrom.subId &&
-        c.to.boxId === toBoxId &&
-        c.to.subId === toSubId
+        c.from.boxId === fromItem.boxId &&
+        c.from.subId === fromItem.subId &&
+        c.to.boxId === toItem.boxId &&
+        c.to.subId === toItem.subId
       );
 
       if (!duplicate) {
         const connType = (connectFrom.type === 'sub' || toLevel === 'sub') ? 'sub' : 'main';
         connections.push({
           id: 'pipe-' + (++connCounter),
-          from: { boxId: connectFrom.boxId, subId: connectFrom.subId, portType: 'output' },
-          to: { boxId: toBoxId, subId: toSubId, portType: 'input' },
+          from: fromItem,
+          to: toItem,
           connType,
           label: ''
         });
@@ -2573,24 +2663,25 @@
 
   let connectionStartTime = 0;
 
-  // Tarik & Sambung Pipa: Cukup 1x klik pada output, lalu klik pada input berikutnya!
+  // Tarik & Sambung Pipa: Cukup 1x klik pada port mana pun (output atau input), lalu klik pada port lawan!
   document.addEventListener('mousedown', (e) => {
     // 1. Jika SEDANG dalam mode menghubungkan pipa:
     if (isConnecting && connectFrom) {
-      // Periksa apakah user klik target input port (atau dekat input port target)
-      const inputPort = findInputPortTarget(e.clientX, e.clientY);
-      if (inputPort) {
+      // Periksa apakah user klik target port lawan (atau dekat target port)
+      const targetType = connectFrom.portType === 'output' ? 'input' : 'output';
+      const targetPort = findPortTarget(e.clientX, e.clientY, targetType);
+      if (targetPort) {
         e.stopPropagation();
         e.preventDefault();
-        completeConnection(inputPort);
+        completeConnection(targetPort);
         return;
       }
 
-      // Periksa jika user klik port output yang sama lagi -> batalkan mode
-      const sameOutPort = e.target.closest('.main-port.output, .sub-port.output');
-      if (sameOutPort) {
-        const boxId = sameOutPort.dataset.boxId;
-        const subId = sameOutPort.dataset.subId || null;
+      // Periksa jika user klik port yang sama persis -> batalkan mode
+      const samePort = e.target.closest('.main-port, .sub-port');
+      if (samePort) {
+        const boxId = samePort.dataset.boxId;
+        const subId = samePort.dataset.subId || null;
         if (connectFrom.boxId === boxId && connectFrom.subId === subId) {
           e.stopPropagation();
           e.preventDefault();
@@ -2606,18 +2697,19 @@
       }
     }
 
-    // 2. Klik pada port output untuk MEMULAI mode sambung (cukup 1 kali klik!)
-    const portEl = e.target.closest('.main-port.output, .sub-port.output');
+    // 2. Klik pada port MANAPUN (output atau input) untuk MEMULAI mode sambung
+    const portEl = e.target.closest('.main-port, .sub-port');
     if (portEl) {
       e.stopPropagation();
       e.preventDefault();
 
       const boxId = portEl.dataset.boxId;
       const subId = portEl.dataset.subId || null;
-      const portLevel = portEl.dataset.portLevel;
+      const portLevel = portEl.dataset.portLevel || (subId ? 'sub' : 'main');
+      const portType = portEl.classList.contains('input') ? 'input' : 'output';
 
       isConnecting = true;
-      connectFrom = { type: portLevel, boxId, subId, portType: 'output' };
+      connectFrom = { type: portLevel, boxId, subId, portType };
       connectionStartTime = Date.now();
       viewport.classList.add('connecting');
 
@@ -2634,17 +2726,21 @@
       tempLine.dataset.sx = sx;
       tempLine.dataset.sy = sy;
       tempLine.setAttribute('d', `M ${sx} ${sy} L ${sx} ${sy}`);
-      highlightInputPorts();
+      highlightOppositePorts(portType);
     }
   });
 
-
-  function highlightInputPorts() {
-    document.querySelectorAll('.main-port.input, .sub-port.input').forEach(p => {
+  function highlightOppositePorts(startType) {
+    const opp = startType === 'output' ? 'input' : 'output';
+    document.querySelectorAll(`.main-port.${opp}, .sub-port.${opp}`).forEach(p => {
       p.style.background = '#fde047';
-      p.style.transform = 'translateY(-50%) scale(1.35)';
+      p.style.transform = 'translateY(-50%) scale(1.4)';
       p.style.boxShadow = '0 0 0 3px #000000';
     });
+  }
+
+  function highlightInputPorts() {
+    highlightOppositePorts('output');
   }
 
   function clearPortHighlights() {

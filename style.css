@@ -3338,33 +3338,39 @@ html, body {
 @media (max-width: 768px) {
   /* LANDING PAGE MOBILE ADJUSTMENTS */
   .landing-nav {
-    padding: 8px 12px;
-    gap: 8px;
-  }
-  .landing-brand .brand-sub {
-    display: none;
-  }
-  .landing-brand .brand-title {
-    font-size: 0.92rem;
-  }
-  .landing-nav-actions {
+    padding: 6px 10px;
     gap: 6px;
   }
-  .nb-btn-donate {
-    padding: 5px 9px;
-    font-size: 0.76rem;
-    gap: 5px;
+  .landing-brand .brand-sub {
+    display: none !important;
   }
-  .nb-btn-donate span {
-    display: none; /* Icon-only on mobile to save precious navbar space */
-  }
-  #landingCtaNavBtn {
-    padding: 5px 10px;
-    font-size: 0.78rem;
+  .landing-brand .brand-title {
+    font-size: 0.82rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .landing-nav-actions {
+    gap: 4px;
+  }
+  .nb-btn-donate {
+    padding: 4px 7px;
+    font-size: 0.72rem;
+    gap: 4px;
+    border-radius: 6px;
+  }
+  .nb-btn-donate span {
+    display: none !important; /* Icon-only on mobile to save precious navbar space */
+  }
+  #landingCtaNavBtn {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    border-radius: 6px;
+  }
   #landingCtaNavBtn span {
-    font-size: 0.76rem;
+    font-size: 0.72rem;
   }
   .hero-title {
     font-size: 1.8rem;
@@ -3442,46 +3448,48 @@ html, body {
   .hide-mobile { display: none !important; }
   .show-mobile { display: flex !important; }
 
-  /* DASHBOARD HEADER ON MOBILE: ZERO OVERFLOW & PROPORTIONATE */
+  /* DASHBOARD HEADER ON MOBILE: ZERO OVERFLOW & ULTRA COMPACT PROPORTIONS */
   .app-header {
-    padding: 6px 8px;
-    height: 50px;
-    min-height: 50px;
-    gap: 6px;
+    padding: 4px 6px;
+    height: 42px;
+    min-height: 42px;
+    gap: 4px;
     justify-content: space-between;
   }
 
   .header-zone-left {
-    gap: 5px;
-    flex-shrink: 1;
+    gap: 4px;
+    flex-shrink: 0;
     min-width: 0;
   }
-  .brand .brand-sub { display: none; }
-  .brand .brand-title {
-    font-size: 0.8rem;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+  .brand .brand-text { display: none !important; }
+  .brand .brand-sub { display: none !important; }
+  .brand .brand-title { display: none !important; }
   .back-home-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.78rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+    border-radius: 6px;
   }
   .brand-box {
-    width: 28px;
-    height: 28px;
-    font-size: 0.78rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+    border-radius: 6px;
   }
   .project-input-wrap {
     display: none !important;
   }
   .lang-switcher-pill {
     padding: 1px 2px;
+    border-radius: 8px;
+    gap: 1px;
   }
   .lang-btn {
     padding: 2px 4px;
-    font-size: 0.66rem;
+    font-size: 0.62rem;
+    min-width: 18px;
+    border-radius: 4px;
   }
 
   /* HIDE CENTER ISLAND ON PHONES (Handled by mobile-floating-bar) */
@@ -3498,42 +3506,77 @@ html, body {
     display: none !important;
   }
   .room-badge-pill {
-    padding: 4px 6px;
+    display: none !important;
   }
   .room-collab-bar {
-    gap: 3px;
-    padding: 2px 3px;
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
   .collab-avatars-stack {
     display: none !important;
   }
   #shareRoomBtn {
-    padding: 3px 6px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.74rem;
+    border-radius: 6px;
   }
 
   .user-profile-pill {
-    padding: 2px 5px 2px 2px;
+    padding: 1px 4px 1px 2px;
     gap: 3px;
+    height: 28px;
+    border-radius: 14px;
   }
   .user-avatar-badge {
-    width: 24px;
-    height: 24px;
-    font-size: 0.72rem;
+    width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
   }
   .user-name-inline-input {
-    width: 50px;
-    font-size: 0.74rem;
+    width: 40px;
+    font-size: 0.7rem;
+    padding: 1px 2px;
   }
 
   .export-dropdown-wrap #exportMenuTriggerBtn {
-    padding: 4px 7px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.74rem;
-    gap: 4px;
+    gap: 0;
+    border-radius: 6px;
   }
+  .export-dropdown-wrap #exportMenuTriggerBtn span,
+  .export-dropdown-wrap #exportMenuTriggerBtn .dd-chevron {
+    display: none !important;
+  }
+
+  .mobile-drawer-toggle {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.74rem;
+    border-radius: 6px;
+  }
+
   .export-menu-dropdown {
     width: 240px;
     right: 0;
+    top: calc(100% + 4px);
   }
 
   /* Hide header Prompt AI button because mobile floating bar has it */
@@ -3551,15 +3594,17 @@ html, body {
     border: var(--nb-border-lg);
     box-shadow: 4px 4px 0px #000000;
     border-radius: 40px;
-    padding: 5px 8px;
-    gap: 5px;
+    padding: 4px 6px;
+    gap: 4px;
     z-index: 300;
-    max-width: calc(100vw - 16px);
+    max-width: calc(100vw - 12px);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .mf-btn {
-    padding: 6px 10px;
-    font-size: 0.75rem;
-    border-radius: 20px;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    border-radius: 16px;
     border: var(--nb-border-sm);
     box-shadow: 1.5px 1.5px 0px #000;
     white-space: nowrap;
@@ -3576,28 +3621,28 @@ html, body {
 
   /* Mobile HUD Zoom Controls Placement */
   .nb-hud-zoom {
-    bottom: 68px;
-    left: 12px;
+    bottom: 64px;
+    left: 8px;
   }
 }
 
 @media (max-width: 480px) {
   .hero-title {
-    font-size: 1.6rem;
-  }
-  .brand .brand-title {
-    display: none; /* Just show the brand icon box on small screens */
+    font-size: 1.5rem;
   }
   .user-name-inline-input {
-    width: 44px;
+    width: 36px;
   }
   .mf-btn {
-    padding: 5px 8px;
-    font-size: 0.7rem;
-    gap: 4px;
+    padding: 4px 7px;
+    font-size: 0.68rem;
+    gap: 3px;
   }
   .mf-btn i {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
+  }
+  .main-box {
+    min-width: 200px;
   }
 }
 
