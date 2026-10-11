@@ -615,11 +615,21 @@
   };
 
   const USER_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#e11d48', '#0891b2'];
-  let currentRoomId = new URLSearchParams(window.location.search).get('room') || 'tim-utama';
+  const urlParamRoom = new URLSearchParams(window.location.search).get('room');
+  let currentRoomId = (urlParamRoom && urlParamRoom.trim().length > 0) ? urlParamRoom.trim() : null;
   let collabChannel = null;
   const activeCollaborators = new Map(); // id -> { id, name, avatar, color, lastSeen }
   let lastCursorBroadcast = 0;
   let isReceivingRemoteSync = false;
+
+  function generateUniqueRoomId() {
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    let res = 'rb-';
+    for (let i = 0; i < 6; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return res;
+  }
 
   // ============================================================
   // MULTI-PROJECT STORAGE & PERSISTENCE (TLDRAW STYLE)
@@ -1115,25 +1125,74 @@
   // REAL-TIME MULTIPLAYER COLLABORATION ENGINE (INTERNET WIDE)
   // ============================================================
   let mqttClient = null;
-  const roomTopic = `rancangbareng/v1/room_${encodeURIComponent(currentRoomId)}`;
+  let activeRoomTopic = null;
 
-  function initRealtimeCollab() {
-    if (roomNameText) roomNameText.textContent = `Room: #${currentRoomId}`;
+  function initRealtimeCollab(roomId = currentRoomId) {
+    currentRoomId = roomId ? roomId.trim() : null;
+
+    // 1. JIKA BELUM DIBAGIKAN (MODE PRIBADI / SOLO):
+    // Setiap orang yang buka web utama masuk ke kanvas pribadinya masing-masing,
+    // tidak terhubung dan tidak saling menimpa dengan orang lain.
+    if (!currentRoomId) {
+      if (mqttClient) {
+        try { mqttClient.end(true); } catch (_) {}
+        mqttClient = null;
+      }
+      activeRoomTopic = null;
+
+      if (roomNameText) {
+        roomNameText.textContent = currentLang === 'en' ? 'Private (Solo)' : 'Pribadi (Solo)';
+      }
+      if (roomBadgePill) {
+        roomBadgePill.title = currentLang === 'en'
+          ? 'Private Canvas (Only you). Click Share to invite your team.'
+          : 'Kanvas Pribadi (Hanya Kamu). Klik Bagikan untuk kolaborasi bersama tim.';
+        const dot = roomBadgePill.querySelector('.room-status-dot');
+        if (dot) dot.className = 'room-status-dot solo';
+      }
+      if (switchRoomIdInput) switchRoomIdInput.value = '';
+      if (roomShareLinkInput) roomShareLinkInput.value = '';
+
+      activeCollaborators.clear();
+      activeCollaborators.set(currentUser.id, {
+        ...currentUser,
+        lastSeen: Date.now()
+      });
+      updateCollaboratorsUI();
+      return;
+    }
+
+    // 2. JIKA SUDAH DIBAGIKAN / MASUK LEWAT LINK SHARE (MODE KOLABORASI LIVE):
+    activeRoomTopic = `rancangbareng/v1/room_${encodeURIComponent(currentRoomId)}`;
+
+    if (roomNameText) {
+      roomNameText.textContent = `Room: #${currentRoomId}`;
+    }
+    if (roomBadgePill) {
+      roomBadgePill.title = `Ruang Kolaborasi Aktif #${currentRoomId}. Klik untuk kelola link & tim.`;
+      const dot = roomBadgePill.querySelector('.room-status-dot');
+      if (dot) dot.className = 'room-status-dot live';
+    }
     if (switchRoomIdInput) switchRoomIdInput.value = currentRoomId;
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}#dashboard`;
     if (roomShareLinkInput) roomShareLinkInput.value = shareUrl;
 
-    // 1. Fallback lokal: BroadcastChannel & storage events (antar-tab di satu perangkat)
-    try {
-      collabChannel = new BroadcastChannel('rb_collab_' + currentRoomId);
-      collabChannel.onmessage = handleCollabMessage;
-    } catch (e) {
-      console.warn('BroadcastChannel not supported', e);
+    // Disconnect client lama jika ganti room
+    if (mqttClient) {
+      try { mqttClient.end(true); } catch (_) {}
+      mqttClient = null;
     }
 
+    // Fallback lokal: BroadcastChannel (antar-tab di satu perangkat)
+    try {
+      if (collabChannel) collabChannel.close();
+      collabChannel = new BroadcastChannel('rb_collab_' + currentRoomId);
+      collabChannel.onmessage = handleCollabMessage;
+    } catch (e) {}
+
     window.addEventListener('storage', (e) => {
-      if (e.key === 'rb_broadcast_' + currentRoomId && e.newValue) {
+      if (currentRoomId && e.key === 'rb_broadcast_' + currentRoomId && e.newValue) {
         try {
           const msg = JSON.parse(e.newValue);
           if (msg && msg.senderId !== currentUser?.id) {
@@ -1143,7 +1202,7 @@
       }
     });
 
-    // 2. KONEKSI ONLINE INTERNET VIA WEBSOCKET MQTT (BEBAS NAT / FIREWALL, 100% GRATIS)
+    // KONEKSI ONLINE INTERNET VIA WEBSOCKET MQTT (Hanya aktif jika sudah masuk Room!)
     if (typeof mqtt !== 'undefined') {
       try {
         const clientId = 'rb_' + Math.random().toString(36).substring(2, 9);
@@ -1156,14 +1215,14 @@
 
         mqttClient.on('connect', () => {
           console.log('[Collab] Online internet sync connected for room:', currentRoomId);
-          mqttClient.subscribe(roomTopic, { qos: 0 });
-          showToast(`Terhubung ke Room #${currentRoomId} (Online Sync Aktif)!`, false);
+          mqttClient.subscribe(activeRoomTopic, { qos: 0 });
+          showToast(`Terhubung ke Ruang Kolaborasi #${currentRoomId}!`, false);
           broadcast({ type: 'user_join', user: currentUser });
           broadcast({ type: 'request_state' });
         });
 
         mqttClient.on('message', (topic, payload) => {
-          if (topic === roomTopic) {
+          if (topic === activeRoomTopic) {
             try {
               const msg = JSON.parse(payload.toString());
               if (msg && msg.senderId !== currentUser?.id) {
@@ -1191,20 +1250,26 @@
     broadcast({ type: 'request_state' });
 
     setInterval(() => {
-      broadcastPresence();
-      cleanupInactiveCollaborators();
+      if (currentRoomId) {
+        broadcastPresence();
+        cleanupInactiveCollaborators();
+      }
     }, 3500);
   }
 
   function broadcast(msg) {
-    if (!currentUser) return;
+    // Mode Pribadi: Jangan broadcast keluar sama sekali!
+    if (!currentRoomId || !currentUser) return;
+
     msg.senderId = currentUser.id;
     msg.timestamp = Date.now();
 
-    // Kirim lewat WebSocket Internet Publik (Real-Time ke HP / Laptop Lain di Dunia)
+    const topic = activeRoomTopic || `rancangbareng/v1/room_${encodeURIComponent(currentRoomId)}`;
+
+    // Kirim lewat WebSocket Internet Publik (Real-Time ke rekan tim di room ini)
     if (mqttClient && mqttClient.connected) {
       try {
-        mqttClient.publish(roomTopic, JSON.stringify(msg));
+        mqttClient.publish(topic, JSON.stringify(msg));
       } catch (e) {}
     }
 
@@ -1218,7 +1283,7 @@
   }
 
   function broadcastPresence() {
-    if (!currentUser) return;
+    if (!currentRoomId || !currentUser) return;
     broadcast({ type: 'presence_ping', user: currentUser });
     activeCollaborators.set(currentUser.id, {
       ...currentUser,
@@ -1228,7 +1293,7 @@
   }
 
   function broadcastSync(data) {
-    if (isReceivingRemoteSync) return;
+    if (!currentRoomId || isReceivingRemoteSync) return;
     broadcast({
       type: 'canvas_sync',
       data: {
@@ -1357,12 +1422,52 @@
   }
 
   function openInviteModal() {
+    // Jika belum punya room kolaborasi (masih di Mode Pribadi / Solo):
+    // Buatkan unique room ID baru otomatis (seperti Excalidraw / Google Docs)!
+    if (!currentRoomId) {
+      currentRoomId = generateUniqueRoomId();
+      const newUrl = `${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}#dashboard`;
+      window.history.replaceState({ room: currentRoomId }, '', newUrl);
+
+      // Inisialisasi koneksi multiplayer ke room unik baru ini
+      initRealtimeCollab(currentRoomId);
+
+      // Broadcast state kanvas saat ini agar rekan yang join langsung melihat kotaknya
+      setTimeout(() => {
+        saveToLocalStorage();
+      }, 350);
+
+      showToast('Ruang kolaborasi dibuat! Tautan siap dibagikan ke tim.', false);
+    }
+
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}#dashboard`;
     if (roomShareLinkInput) roomShareLinkInput.value = shareUrl;
+    if (switchRoomIdInput) switchRoomIdInput.value = currentRoomId;
     if (inviteModal) inviteModal.classList.add('active');
   }
 
-  if (shareRoomBtn) shareRoomBtn.addEventListener('click', openInviteModal);
+  function leaveCollabRoom() {
+    currentRoomId = null;
+    const cleanUrl = `${window.location.pathname}#dashboard`;
+    window.history.replaceState({}, '', cleanUrl);
+    initRealtimeCollab(null);
+    if (inviteModal) inviteModal.classList.remove('active');
+    showToast('Kembali ke Mode Kanvas Pribadi (Solo).');
+  }
+
+  const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+  if (leaveRoomBtn) leaveRoomBtn.addEventListener('click', leaveCollabRoom);
+
+  if (shareRoomBtn) {
+    shareRoomBtn.addEventListener('click', () => {
+      openInviteModal();
+      if (roomShareLinkInput && roomShareLinkInput.value) {
+        navigator.clipboard.writeText(roomShareLinkInput.value).then(() => {
+          showToast('Tautan ruangan kolaborasi disalin ke clipboard!');
+        }).catch(() => {});
+      }
+    });
+  }
   if (roomBadgePill) roomBadgePill.addEventListener('click', openInviteModal);
   if (closeInviteModal) closeInviteModal.addEventListener('click', () => inviteModal?.classList.remove('active'));
   if (closeInviteBottomBtn) closeInviteBottomBtn.addEventListener('click', () => inviteModal?.classList.remove('active'));
@@ -1371,7 +1476,7 @@
     copyRoomLinkBtn.addEventListener('click', () => {
       if (roomShareLinkInput) {
         navigator.clipboard.writeText(roomShareLinkInput.value).then(() => {
-          showToast('Link ruangan kolaborasi disalin ke clipboard!');
+          showToast('Tautan ruangan kolaborasi disalin ke clipboard!');
         });
       }
     });
