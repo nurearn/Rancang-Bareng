@@ -1002,119 +1002,85 @@
   }
 
   // ============================================================
-  // GOOGLE AUTHENTICATION & USER PROFILE
+  // USER PROFILE (INSTANT USERNAME & COLOR PICKER - NO GOOGLE REQUIRED)
   // ============================================================
+  const userNameInput = document.getElementById('userNameInput');
+  const userAvatarBtn = document.getElementById('userAvatarBtn');
+  const userAvatarInitial = document.getElementById('userAvatarInitial');
+
   function initUserAuth() {
     try {
       const saved = localStorage.getItem(USER_STORAGE_KEY);
       if (saved) {
         currentUser = JSON.parse(saved);
-      } else {
-        const randColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
-        currentUser = {
-          id: 'user_' + Math.random().toString(36).substring(2, 9),
-          name: 'Tamu Arsitek',
-          email: 'guest@rancangbareng.studio',
-          avatar: 'A',
-          color: randColor
-        };
       }
     } catch (e) {
       console.warn(e);
     }
+
+    if (!currentUser || !currentUser.name) {
+      const randColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+      const defaultNames = ['Arsitek Alpha', 'Rian Lead', 'Alex Frontend', 'Devika Backend', 'Arsitek Sistem', 'Kawan Studio'];
+      const randName = defaultNames[Math.floor(Math.random() * defaultNames.length)];
+      currentUser = {
+        id: 'user_' + Math.random().toString(36).substring(2, 9),
+        name: randName,
+        avatar: randName.charAt(0).toUpperCase(),
+        color: randColor
+      };
+      try { localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser)); } catch (err) {}
+    }
+
     updateUserAuthUI();
+
+    if (userNameInput) {
+      userNameInput.value = currentUser.name;
+      userNameInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (val) {
+          currentUser.name = val;
+          currentUser.avatar = val.charAt(0).toUpperCase();
+          if (userAvatarInitial) userAvatarInitial.textContent = currentUser.avatar;
+          try { localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser)); } catch (err) {}
+          broadcastPresence();
+          updateCollaboratorsUI();
+        }
+      });
+    }
+
+    if (userAvatarBtn) {
+      userAvatarBtn.addEventListener('click', () => {
+        const idx = USER_COLORS.indexOf(currentUser.color);
+        const nextIdx = (idx + 1) % USER_COLORS.length;
+        currentUser.color = USER_COLORS[nextIdx];
+        updateUserAuthUI();
+        try { localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser)); } catch (err) {}
+        showToast('Warna kursor kamu diubah!', false);
+        broadcastPresence();
+        updateCollaboratorsUI();
+      });
+    }
   }
 
   function updateUserAuthUI() {
     if (!currentUser) return;
-    const isGuest = currentUser.email === 'guest@rancangbareng.studio';
-
-    if (landingGoogleBtnLabel) {
-      landingGoogleBtnLabel.textContent = isGuest ? 'Login Google' : currentUser.name;
+    if (userNameInput && userNameInput.value !== currentUser.name) {
+      userNameInput.value = currentUser.name;
     }
-
-    if (dashboardGoogleLoginBtn && userProfileCard) {
-      if (isGuest) {
-        dashboardGoogleLoginBtn.style.display = 'inline-flex';
-        userProfileCard.style.display = 'none';
-      } else {
-        dashboardGoogleLoginBtn.style.display = 'none';
-        userProfileCard.style.display = 'flex';
-        if (userNameLabel) userNameLabel.textContent = currentUser.name;
-        if (userAvatarImg) {
-          userAvatarImg.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.name)}&backgroundColor=${currentUser.color.replace('#','')}`;
-        }
-      }
+    if (userAvatarInitial) {
+      userAvatarInitial.textContent = (currentUser.name || 'A').charAt(0).toUpperCase();
+    }
+    if (userAvatarBtn) {
+      userAvatarBtn.style.background = currentUser.color || '#2563eb';
     }
   }
 
-  function loginUser({ name, email, color }) {
-    currentUser = {
-      id: currentUser?.id || ('user_' + Math.random().toString(36).substring(2, 9)),
-      name,
-      email,
-      avatar: name.charAt(0).toUpperCase(),
-      color: color || USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)]
-    };
-    try {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
-    } catch (e) {}
-    updateUserAuthUI();
-    closeAllModals();
-    showToast(`Berhasil masuk sebagai ${currentUser.name}!`);
-    broadcastPresence();
-  }
-
-  function logoutUser() {
-    localStorage.removeItem(USER_STORAGE_KEY);
-    currentUser = {
-      id: 'user_' + Math.random().toString(36).substring(2, 9),
-      name: 'Tamu Arsitek',
-      email: 'guest@rancangbareng.studio',
-      avatar: 'A',
-      color: USER_COLORS[0]
-    };
-    updateUserAuthUI();
-    showToast('Telah keluar dari akun.');
-    broadcastPresence();
-  }
-
-  function openGoogleAuthModal() {
-    if (googleAuthModal) googleAuthModal.classList.add('active');
-  }
-
-  if (landingGoogleLoginBtn) landingGoogleLoginBtn.addEventListener('click', openGoogleAuthModal);
-  if (dashboardGoogleLoginBtn) dashboardGoogleLoginBtn.addEventListener('click', openGoogleAuthModal);
-  if (closeGoogleAuthModal) closeGoogleAuthModal.addEventListener('click', () => googleAuthModal?.classList.remove('active'));
-  if (cancelGoogleAuthBtn) cancelGoogleAuthBtn.addEventListener('click', () => googleAuthModal?.classList.remove('active'));
-  if (userLogoutBtn) userLogoutBtn.addEventListener('click', logoutUser);
-
-  if (quickLoginDevBtn) {
-    quickLoginDevBtn.addEventListener('click', () => {
-      loginUser({ name: 'Rian (Developer Lead)', email: 'rian.lead@gmail.com', color: '#2563eb' });
-    });
-  }
-
-  if (quickLoginArchBtn) {
-    quickLoginArchBtn.addEventListener('click', () => {
-      loginUser({ name: 'Arsitek Sistem', email: 'arsitek.sistem@gmail.com', color: '#16a34a' });
-    });
-  }
-
-  if (confirmCustomLoginBtn) {
-    confirmCustomLoginBtn.addEventListener('click', () => {
-      const val = customUserNameInput?.value?.trim();
-      if (!val) {
-        showToast('Masukkan nama panggilan kamu', true);
-        return;
-      }
-      loginUser({ name: val, email: `${val.toLowerCase().replace(/\s+/g,'')}@team.studio`, color: '#9333ea' });
-    });
-  }
-
   // ============================================================
-  // REAL-TIME MULTIPLAYER COLLABORATION ENGINE
+  // REAL-TIME MULTIPLAYER COLLABORATION ENGINE (INTERNET WIDE)
   // ============================================================
+  let mqttClient = null;
+  const roomTopic = `rancangbareng/v1/room_${encodeURIComponent(currentRoomId)}`;
+
   function initRealtimeCollab() {
     if (roomNameText) roomNameText.textContent = `Room: #${currentRoomId}`;
     if (switchRoomIdInput) switchRoomIdInput.value = currentRoomId;
@@ -1122,6 +1088,7 @@
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}#dashboard`;
     if (roomShareLinkInput) roomShareLinkInput.value = shareUrl;
 
+    // 1. Fallback lokal: BroadcastChannel & storage events (antar-tab di satu perangkat)
     try {
       collabChannel = new BroadcastChannel('rb_collab_' + currentRoomId);
       collabChannel.onmessage = handleCollabMessage;
@@ -1140,6 +1107,44 @@
       }
     });
 
+    // 2. KONEKSI ONLINE INTERNET VIA WEBSOCKET MQTT (BEBAS NAT / FIREWALL, 100% GRATIS)
+    if (typeof mqtt !== 'undefined') {
+      try {
+        const clientId = 'rb_' + Math.random().toString(36).substring(2, 9);
+        mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+          clientId,
+          clean: true,
+          connectTimeout: 5000,
+          reconnectPeriod: 3000
+        });
+
+        mqttClient.on('connect', () => {
+          console.log('[Collab] Online internet sync connected for room:', currentRoomId);
+          mqttClient.subscribe(roomTopic, { qos: 0 });
+          showToast(`Terhubung ke Room #${currentRoomId} (Online Sync Aktif)!`, false);
+          broadcast({ type: 'user_join', user: currentUser });
+          broadcast({ type: 'request_state' });
+        });
+
+        mqttClient.on('message', (topic, payload) => {
+          if (topic === roomTopic) {
+            try {
+              const msg = JSON.parse(payload.toString());
+              if (msg && msg.senderId !== currentUser?.id) {
+                handleCollabMessage({ data: msg });
+              }
+            } catch (err) {}
+          }
+        });
+
+        mqttClient.on('error', (err) => {
+          console.warn('[Collab] Broker status:', err);
+        });
+      } catch (err) {
+        console.warn('[Collab] Online sync initialization error:', err);
+      }
+    }
+
     activeCollaborators.set(currentUser.id, {
       ...currentUser,
       lastSeen: Date.now()
@@ -1156,8 +1161,18 @@
   }
 
   function broadcast(msg) {
-    msg.senderId = currentUser?.id;
+    if (!currentUser) return;
+    msg.senderId = currentUser.id;
     msg.timestamp = Date.now();
+
+    // Kirim lewat WebSocket Internet Publik (Real-Time ke HP / Laptop Lain di Dunia)
+    if (mqttClient && mqttClient.connected) {
+      try {
+        mqttClient.publish(roomTopic, JSON.stringify(msg));
+      } catch (e) {}
+    }
+
+    // Fallback lokal perangkat
     if (collabChannel) {
       try { collabChannel.postMessage(msg); } catch (e) {}
     }
@@ -1285,12 +1300,8 @@
     if (!collabAvatarsStack) return;
 
     let userList = Array.from(activeCollaborators.values());
-    if (userList.length === 1) {
-      userList = [
-        userList[0],
-        { id: 'demo_1', name: 'Alex (Frontend)', color: '#16a34a', avatar: 'A' },
-        { id: 'demo_2', name: 'Devika (Backend)', color: '#9333ea', avatar: 'D' }
-      ];
+    if (userList.length === 0 && currentUser) {
+      userList = [currentUser];
     }
 
     collabAvatarsStack.innerHTML = userList.slice(0, 4).map(u => `

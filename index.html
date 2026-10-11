@@ -31,6 +31,9 @@
   
   <link rel="stylesheet" href="style.css">
 
+  <!-- Realtime Internet Collab Library (MQTT over WebSocket) -->
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.5/dist/mqtt.min.js"></script>
+
   <!-- Deferred Canvas Export Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer crossorigin="anonymous"></script>
 </head>
@@ -72,17 +75,6 @@
           <i class="fas fa-heart text-red" aria-hidden="true"></i>
           <span data-i18n="supportCreator">Dukung Kreator</span>
         </a>
-
-        <!-- Google Login on Landing -->
-        <button class="nb-btn-google btn-sm" id="landingGoogleLoginBtn" aria-label="Login dengan akun Google">
-          <svg class="google-svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span id="landingGoogleBtnLabel" data-i18n="loginGoogle">Login Google</span>
-        </button>
 
         <!-- CTA ke Dashboard -->
         <button class="nb-btn nb-btn-yellow" id="landingCtaNavBtn" aria-label="Buka Dashboard Rancang Bareng">
@@ -465,25 +457,12 @@
           </button>
         </div>
 
-        <!-- Google User / Login -->
-        <div class="user-auth-area">
-          <button class="nb-btn-google btn-sm" id="dashboardGoogleLoginBtn" aria-label="Login dengan akun Google">
-            <svg class="google-svg" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-            </svg>
-            <span class="hide-compact" data-i18n="loginGoogle">Login</span>
+        <!-- User Profile Pill (Direct Username Input & Color Avatar) -->
+        <div class="user-profile-pill" id="userProfilePill" title="Klik avatar untuk ganti warna kursor kamu">
+          <button type="button" class="user-avatar-badge" id="userAvatarBtn" title="Ganti warna kursor kamu" aria-label="Ganti warna kursor">
+            <span id="userAvatarInitial">A</span>
           </button>
-
-          <div class="user-profile-card" id="userProfileCard" style="display:none;">
-            <img src="" id="userAvatarImg" alt="Avatar Pengguna" class="user-avatar-img">
-            <span class="user-name hide-compact" id="userNameLabel">Pengguna</span>
-            <button class="user-logout-btn" id="userLogoutBtn" title="Keluar / Logout" aria-label="Keluar / Logout Akun">
-              <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-            </button>
-          </div>
+          <input type="text" id="userNameInput" class="user-name-inline-input" placeholder="Nama kamu..." maxlength="20" title="Ketik nama kamu untuk kolaborasi" aria-label="Nama pengguna untuk kolaborasi">
         </div>
 
         <!-- Sleek Export Dropdown Menu -->
@@ -732,71 +711,7 @@
   </div>
 
 
-  <!-- ============================================================ -->
-  <!-- MODAL: GOOGLE AUTH LOGIN MODAL                              -->
-  <!-- ============================================================ -->
-  <div class="nb-modal-overlay" id="googleAuthModal">
-    <div class="nb-modal-card auth-modal-card">
-      <div class="nb-modal-header" style="background:#ffffff;">
-        <div class="nb-modal-title">
-          <svg class="google-svg" viewBox="0 0 24 24" width="24" height="24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <div>
-            <h3>Masuk ke Rancang Bareng</h3>
-            <span class="modal-subtitle">Gunakan Akun Google untuk sinkronisasi</span>
-          </div>
-        </div>
-        <button class="modal-close-btn" id="closeGoogleAuthModal"><i class="fas fa-xmark"></i></button>
-      </div>
 
-      <div class="nb-modal-body auth-modal-body">
-        <p class="auth-intro-text">
-          Pilih akun Google untuk mulai mengendalikan kanvas arsitektur secara kolaboratif bersama tim.
-        </p>
-
-        <!-- Quick 1-Click Profile Selection -->
-        <div class="google-accounts-list">
-          <button class="google-account-item" id="quickLoginDevBtn">
-            <div class="ga-avatar" style="background:#2563eb;">R</div>
-            <div class="ga-info">
-              <span class="ga-name">Rian (Developer Lead)</span>
-              <span class="ga-email">rian.lead@gmail.com</span>
-            </div>
-            <i class="fas fa-chevron-right ga-arrow"></i>
-          </button>
-
-          <button class="google-account-item" id="quickLoginArchBtn">
-            <div class="ga-avatar" style="background:#16a34a;">A</div>
-            <div class="ga-info">
-              <span class="ga-name">Arsitek Sistem</span>
-              <span class="ga-email">arsitek.sistem@gmail.com</span>
-            </div>
-            <i class="fas fa-chevron-right ga-arrow"></i>
-          </button>
-        </div>
-
-        <div class="auth-divider">
-          <span>atau masuk dengan nama kustom</span>
-        </div>
-
-        <div class="nb-form-group">
-          <label>Nama Pengguna / Panggilan</label>
-          <input type="text" id="customUserNameInput" placeholder="Contoh: Rian, Alex, atau Siti..." maxlength="40">
-        </div>
-      </div>
-
-      <div class="nb-modal-footer">
-        <button class="nb-btn nb-btn-white" id="cancelGoogleAuthBtn">Batal</button>
-        <button class="nb-btn nb-btn-yellow" id="confirmCustomLoginBtn">
-          <i class="fas fa-arrow-right-to-bracket"></i> Masuk Sekarang
-        </button>
-      </div>
-    </div>
-  </div>
 
 
   <!-- ============================================================ -->
