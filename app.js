@@ -352,91 +352,260 @@
     });
   }
 
-  // Smart obstacle-avoiding pipe spline calculation:
-  // Selalu berada di LUAR bodi kotak, tidak pernah menembus/menghalangi kotak,
-  // dan otomatis menyesuaikan posisinya dengan rapi saat kotak dipindah-pindah.
-  // Mendukung bebas dua arah: kanan->kiri, kiri->kanan, kanan->kanan, kiri->kiri.
-  function calculatePipeBezier(x1, y1, x2, y2, fromType = 'output', toType = 'input') {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
+  // ============================================================
+  // SMART PRECISION ELBOW PIPE ROUTING (ROUNDED ORTHOGONAL)
+  // Menjaga jalur pipa rapih siku melengkung (elbow), selalu di luar kotak,
+  // tidak pernah memotong/mengganggu bodi kotak komponen & catatan.
+  // ============================================================
+  function getBoxBounds(boxRef) {
+    if (!boxRef) return null;
+    if (typeof boxRef === 'object' && typeof boxRef.left === 'number' && typeof boxRef.right === 'number') {
+      return boxRef;
+    }
+    const boxId = (typeof boxRef === 'string') ? boxRef : (boxRef.id || null);
+    if (!boxId) return null;
+
+    const b = mainBoxes.find(x => x.id === boxId);
+    if (b) {
+      const left = b.x;
+      const top = b.y;
+      const w = b.w || 280;
+      const h = b.h || 180;
+      return { left, top, right: left + w, bottom: top + h };
+    }
+    const n = notes.find(x => x.id === boxId);
+    if (n) {
+      const left = n.x;
+      const top = n.y;
+      const w = n.w || 240;
+      const h = n.h || 160;
+      return { left, top, right: left + w, bottom: top + h };
+    }
+    const el = document.getElementById(boxId);
+    if (el && board) {
+      const bRect = board.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return {
+        left: (r.left - bRect.left) / zoom,
+        top: (r.top - bRect.top) / zoom,
+        right: (r.right - bRect.left) / zoom,
+        bottom: (r.bottom - bRect.top) / zoom
+      };
+    }
+    return null;
+  }
+
+  function pointsToRoundedPath(points, radius = 12) {
+    if (!points || points.length < 2) return '';
+    const clean = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      const prev = clean[clean.length - 1];
+      const curr = points[i];
+      if (Math.abs(curr[0] - prev[0]) > 0.5 || Math.abs(curr[1] - prev[1]) > 0.5) {
+        clean.push(curr);
+      }
+    }
+    if (clean.length < 2) return '';
+    if (clean.length === 2) {
+      return `M ${clean[0][0].toFixed(1)} ${clean[0][1].toFixed(1)} L ${clean[1][0].toFixed(1)} ${clean[1][1].toFixed(1)}`;
+    }
+
+    let d = `M ${clean[0][0].toFixed(1)} ${clean[0][1].toFixed(1)}`;
+
+    for (let i = 1; i < clean.length - 1; i++) {
+      const pPrev = clean[i - 1];
+      const pCurr = clean[i];
+      const pNext = clean[i + 1];
+
+      const vInX = pCurr[0] - pPrev[0];
+      const vInY = pCurr[1] - pPrev[1];
+      const lenIn = Math.hypot(vInX, vInY);
+
+      const vOutX = pNext[0] - pCurr[0];
+      const vOutY = pNext[1] - pCurr[1];
+      const lenOut = Math.hypot(vOutX, vOutY);
+
+      if (lenIn < 1 || lenOut < 1) {
+        d += ` L ${pCurr[0].toFixed(1)} ${pCurr[1].toFixed(1)}`;
+        continue;
+      }
+
+      const r = Math.min(radius, lenIn / 2, lenOut / 2);
+
+      const startX = pCurr[0] - (vInX / lenIn) * r;
+      const startY = pCurr[1] - (vInY / lenIn) * r;
+
+      const endX = pCurr[0] + (vOutX / lenOut) * r;
+      const endY = pCurr[1] + (vOutY / lenOut) * r;
+
+      d += ` L ${startX.toFixed(1)} ${startY.toFixed(1)}`;
+      d += ` Q ${pCurr[0].toFixed(1)} ${pCurr[1].toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+    }
+
+    const last = clean[clean.length - 1];
+    d += ` L ${last[0].toFixed(1)} ${last[1].toFixed(1)}`;
+    return d;
+  }
+
+  function calculatePipeElbow(x1, y1, x2, y2, fromType = 'output', toType = 'input', rawB1 = null, rawB2 = null) {
+    const b1 = getBoxBounds(rawB1);
+    const b2 = getBoxBounds(rawB2);
+    const lead = 24;
+    let points = [];
+
+    const absDx = Math.abs(x2 - x1);
+    const absDy = Math.abs(y2 - y1);
 
     // KASUS 1: KANAN KE KIRI (Output di kanan -> Input di kiri)
     if (fromType === 'output' && toType === 'input') {
-      if (dx >= 25) {
-        // Kotak asal di kiri, kotak tujuan di kanan -> mengalir bebas di antara kedua kotak
-        const c = Math.max(35, Math.min(220, absDx * 0.45 + absDy * 0.08));
-        return `M ${x1} ${y1} C ${x1 + c} ${y1}, ${x2 - c} ${y2}, ${x2} ${y2}`;
+      if (x2 >= x1 + 40) {
+        if (absDy < 2) {
+          points = [[x1, y1], [x2, y2]];
+        } else {
+          let midX = (x1 + x2) / 2;
+          if (b1 && midX < b1.right + 12) midX = b1.right + 16;
+          if (b2 && midX > b2.left - 12) midX = b2.left - 16;
+          points = [
+            [x1, y1],
+            [midX, y1],
+            [midX, y2],
+            [x2, y2]
+          ];
+        }
       } else {
-        // Kotak asal di kanan, kotak tujuan di kiri -> lengkungkan di LUAR bodi kotak (lewat atas/bawah)
-        const clearanceX = Math.max(50, Math.min(100, absDx * 0.2 + 45));
-        const vOffset = (absDy < 40) ? -85 : (y2 < y1 ? -1 : 1) * Math.max(75, absDy * 0.5 + 45);
-        return `M ${x1} ${y1} C ${x1 + clearanceX} ${y1 + vOffset}, ${x2 - clearanceX} ${y2 - vOffset}, ${x2} ${y2}`;
+        // Kotak 2 berada di kiri atau sejajar vertikal (backward flow)
+        let canPassBetweenY = false;
+        let midY = 0;
+
+        if (b1 && b2) {
+          if (b2.top > b1.bottom + 20) {
+            midY = (b1.bottom + b2.top) / 2;
+            canPassBetweenY = true;
+          } else if (b1.top > b2.bottom + 20) {
+            midY = (b2.bottom + b1.top) / 2;
+            canPassBetweenY = true;
+          }
+        }
+
+        if (canPassBetweenY) {
+          points = [
+            [x1, y1],
+            [x1 + lead, y1],
+            [x1 + lead, midY],
+            [x2 - lead, midY],
+            [x2 - lead, y2],
+            [x2, y2]
+          ];
+        } else {
+          const topBypass = Math.min(b1 ? b1.top : y1, b2 ? b2.top : y2) - 28;
+          const bottomBypass = Math.max(b1 ? b1.bottom : y1, b2 ? b2.bottom : y2) + 28;
+          const bypassY = (y2 <= y1) ? topBypass : bottomBypass;
+
+          points = [
+            [x1, y1],
+            [x1 + lead, y1],
+            [x1 + lead, bypassY],
+            [x2 - lead, bypassY],
+            [x2 - lead, y2],
+            [x2, y2]
+          ];
+        }
       }
     }
-
     // KASUS 2: KIRI KE KANAN (Input di kiri -> Output di kanan)
-    if (fromType === 'input' && toType === 'output') {
-      if (x1 >= x2 + 25) {
-        // Kotak asal di kanan, kotak tujuan di kiri -> mengalir bebas di antara kotak ke arah kiri
-        const c = Math.max(35, Math.min(220, absDx * 0.45 + absDy * 0.08));
-        return `M ${x1} ${y1} C ${x1 - c} ${y1}, ${x2 + c} ${y2}, ${x2} ${y2}`;
+    else if (fromType === 'input' && toType === 'output') {
+      if (x1 >= x2 + 40) {
+        if (absDy < 2) {
+          points = [[x1, y1], [x2, y2]];
+        } else {
+          let midX = (x1 + x2) / 2;
+          if (b1 && midX > b1.left - 12) midX = b1.left - 16;
+          if (b2 && midX < b2.right + 12) midX = b2.right + 16;
+          points = [
+            [x1, y1],
+            [midX, y1],
+            [midX, y2],
+            [x2, y2]
+          ];
+        }
       } else {
-        // Kotak asal di kiri, kotak tujuan di kanan -> lengkungkan di LUAR bodi kotak
-        const clearanceX = Math.max(50, Math.min(100, absDx * 0.2 + 45));
-        const vOffset = (absDy < 40) ? -85 : (y2 < y1 ? -1 : 1) * Math.max(75, absDy * 0.5 + 45);
-        return `M ${x1} ${y1} C ${x1 - clearanceX} ${y1 + vOffset}, ${x2 + clearanceX} ${y2 - vOffset}, ${x2} ${y2}`;
+        let canPassBetweenY = false;
+        let midY = 0;
+
+        if (b1 && b2) {
+          if (b2.top > b1.bottom + 20) {
+            midY = (b1.bottom + b2.top) / 2;
+            canPassBetweenY = true;
+          } else if (b1.top > b2.bottom + 20) {
+            midY = (b2.bottom + b1.top) / 2;
+            canPassBetweenY = true;
+          }
+        }
+
+        if (canPassBetweenY) {
+          points = [
+            [x1, y1],
+            [x1 - lead, y1],
+            [x1 - lead, midY],
+            [x2 + lead, midY],
+            [x2 + lead, y2],
+            [x2, y2]
+          ];
+        } else {
+          const topBypass = Math.min(b1 ? b1.top : y1, b2 ? b2.top : y2) - 28;
+          const bottomBypass = Math.max(b1 ? b1.bottom : y1, b2 ? b2.bottom : y2) + 28;
+          const bypassY = (y2 <= y1) ? topBypass : bottomBypass;
+
+          points = [
+            [x1, y1],
+            [x1 - lead, y1],
+            [x1 - lead, bypassY],
+            [x2 + lead, bypassY],
+            [x2 + lead, y2],
+            [x2, y2]
+          ];
+        }
       }
     }
-
     // KASUS 3: KANAN KE KANAN (Output ke Output)
-    if (fromType === 'output' && toType === 'output') {
-      // Kedua port menghadap kanan -> busur kurva C di sisi kanan luar kotak
-      const maxX = Math.max(x1, x2);
-      const clearanceX = Math.max(55, Math.min(130, absDx * 0.35 + 60));
-      return `M ${x1} ${y1} C ${maxX + clearanceX} ${y1}, ${maxX + clearanceX} ${y2}, ${x2} ${y2}`;
+    else if (fromType === 'output' && toType === 'output') {
+      const maxX = Math.max(b1 ? b1.right : x1, b2 ? b2.right : x2) + 28;
+      points = [
+        [x1, y1],
+        [maxX, y1],
+        [maxX, y2],
+        [x2, y2]
+      ];
     }
-
     // KASUS 4: KIRI KE KIRI (Input ke Input)
-    if (fromType === 'input' && toType === 'input') {
-      // Kedua port menghadap kiri -> busur kurva C di sisi kiri luar kotak
-      const minX = Math.min(x1, x2);
-      const clearanceX = Math.max(55, Math.min(130, absDx * 0.35 + 60));
-      return `M ${x1} ${y1} C ${minX - clearanceX} ${y1}, ${minX - clearanceX} ${y2}, ${x2} ${y2}`;
+    else if (fromType === 'input' && toType === 'input') {
+      const minX = Math.min(b1 ? b1.left : x1, b2 ? b2.left : x2) - 28;
+      points = [
+        [x1, y1],
+        [minX, y1],
+        [minX, y2],
+        [x2, y2]
+      ];
+    }
+    // Fallback umum
+    else {
+      const midX = (x1 + x2) / 2;
+      points = [[x1, y1], [midX, y1], [midX, y2], [x2, y2]];
     }
 
-    // Fallback elastis
-    const c = Math.max(35, Math.min(180, absDx * 0.4));
-    return `M ${x1} ${y1} C ${x1 + c} ${y1}, ${x2 - c} ${y2}, ${x2} ${y2}`;
+    return pointsToRoundedPath(points, 12);
   }
 
-  // Smooth live elastic bezier for dragging tempLine with pointer or finger
+  // Alias kompatibilitas
+  function calculatePipeBezier(x1, y1, x2, y2, fromType = 'output', toType = 'input', b1 = null, b2 = null) {
+    return calculatePipeElbow(x1, y1, x2, y2, fromType, toType, b1, b2);
+  }
+
+  // Live dragging pipe preview (smooth responsive elbow)
   function calculateDragBezier(sx, sy, mx, my, fromType = 'output', targetType = null) {
-    if (targetType) {
-      return calculatePipeBezier(sx, sy, mx, my, fromType, targetType);
-    }
-    const dx = mx - sx;
-    const dy = my - sy;
-    if (fromType === 'output') {
-      if (mx >= sx) {
-        const c = Math.max(25, Math.min(140, dx * 0.45));
-        return `M ${sx} ${sy} C ${sx + c} ${sy}, ${mx - c} ${my}, ${mx} ${my}`;
-      } else {
-        const c = Math.max(35, Math.min(100, (sx - mx) * 0.35));
-        const vArc = (Math.abs(dy) < 30) ? -75 : (my < sy ? -1 : 1) * Math.max(60, Math.abs(dy) * 0.4);
-        return `M ${sx} ${sy} C ${sx + c} ${sy + vArc}, ${mx} ${my}, ${mx} ${my}`;
-      }
-    } else {
-      if (mx <= sx) {
-        const c = Math.max(25, Math.min(140, (sx - mx) * 0.45));
-        return `M ${sx} ${sy} C ${sx - c} ${sy}, ${mx + c} ${my}, ${mx} ${my}`;
-      } else {
-        const c = Math.max(35, Math.min(100, (mx - sx) * 0.35));
-        const vArc = (Math.abs(dy) < 30) ? -75 : (my < sy ? -1 : 1) * Math.max(60, Math.abs(dy) * 0.4);
-        return `M ${sx} ${sy} C ${sx - c} ${sy + vArc}, ${mx} ${my}, ${mx} ${my}`;
-      }
-    }
+    const toType = targetType || (fromType === 'output' ? 'input' : 'output');
+    const b1 = (connectFrom && connectFrom.boxId) ? getBoxBounds(connectFrom.boxId) : null;
+    return calculatePipeElbow(sx, sy, mx, my, fromType, toType, b1, null);
   }
 
   function isSamePortRef(el, boxId, subId) {
@@ -2773,9 +2942,11 @@
 
     const fromType = conn.from?.portType || (fromEl.classList.contains('input') ? 'input' : 'output');
     const toType = conn.to?.portType || (toEl.classList.contains('input') ? 'input' : 'output');
+    const b1 = getBoxBounds(conn.from?.boxId);
+    const b2 = getBoxBounds(conn.to?.boxId);
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', calculatePipeBezier(x1, y1, x2, y2, fromType, toType));
+    path.setAttribute('d', calculatePipeElbow(x1, y1, x2, y2, fromType, toType, b1, b2));
 
     const isSub = conn.connType === 'sub';
     path.setAttribute('class', 'pipe-path' + (isSub ? ' sub-pipe' : '') + (selectedConnId === conn.id ? ' selected' : ''));
